@@ -1,5 +1,5 @@
 import numpy as np
-from math import ceil
+from math import ceil, floor
 from qiskit_ibm_runtime import QiskitRuntimeService
 from qiskit import QuantumCircuit
 import matplotlib.pyplot as plt
@@ -12,7 +12,6 @@ from qiskit.circuit.library import QFTGate
 
 # Consider the wavefunction over the interval [-d, d] at grid distance dx.
 dx = np.pi/8
-# dt = 0.05
 d = np.pi
 length = 2*d
 num_qubits = ceil(np.log2(length/dx + 1))
@@ -37,30 +36,41 @@ def kinetic(n, dt):
 
 # The kinetic energy circuit is the same in all cases, so we don't need to let
 # it vary by passing it into the function.
-def get_sim_circuit(initial_statevector, potential_qc, dt, backend):
+def get_one_iter(potential_qc, dt):
     qc = QuantumCircuit(num_qubits)
-    qc.initialize(initial_statevector)
     qc.compose(kinetic(num_qubits, dt), inplace=True)
     qc.compose(potential_qc, inplace=True)
-    qc.measure_all()
+
+    return qc
+
+def sim(initial_statevector, potential_qc, dt, final_t, backend):
+    sim = QuantumCircuit(num_qubits)
+    sim.initialize(initial_statevector)
+
+    num_iter = 0 if final_t == 0 else floor(final_t/dt)
+
+    # Since the operators for potential and kinetic energy do not commute
+    # we apply the Trotter formula, taking timesteps of length dt from t=0 to t=final_t.
+    for k in range(num_iter):
+        sim.compose(get_one_iter(potential_qc, dt), inplace=True)
+
+    # If final_t is not a multiple of dt, we iterate to the largest
+    # time step before final_t in the loop above and step to final_t here.
+    sim.compose(get_one_iter(potential_qc, final_t-dt*num_iter), inplace=True)
+    sim.measure_all()
 
     pm = generate_preset_pass_manager(backend=backend, optimization_level=1)
-    isa_circuit = pm.run(qc)
-    # isa_circuit.draw("latex", filename="isa_zp.png")
-    return isa_circuit
+    isa_circuit = pm.run(sim)
 
-
-def sim(initial_statevector, potential_qc, dt, backend):
-    sim = get_sim_circuit(initial_statevector, potential_qc, dt, backend)
     sampler = Sampler(mode=backend)
     sampler.options.default_shots = 256 
 
-    job = sampler.run([sim])
+    job = sampler.run([isa_circuit])
     # print(f"Job ID: {job.job_id()}")
     counts = job.result()[0].data.meas.get_counts()
 
     # Fill counts with all possible measurement outcomes; by default 
-    # outcomes that are not observed are not included in the dict.
+    # outcomes that are not observed are not included in the dict by Qiskit.
     for k in range(2**num_qubits):
         k_str = format(k, f"0{num_qubits}b")
         if k_str not in counts:
@@ -79,7 +89,7 @@ psi_0 = np.exp(-(x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * x)
 psi_0 /= np.linalg.norm(psi_0)
 initial_statevector = Statevector(psi_0)
 
-for dt in [x/100 for x in range(15)]:
-    counts = sim(initial_statevector, QuantumCircuit(num_qubits), dt, backend)
+for dt in [x/100 for x in range(25)]:
+    counts = sim(initial_statevector, QuantumCircuit(num_qubits), dt, dt, backend)
     plot_histogram(counts, title=f"after time {dt}")
 plt.show()
