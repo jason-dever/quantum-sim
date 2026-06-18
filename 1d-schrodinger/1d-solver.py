@@ -1,0 +1,85 @@
+import numpy as np
+from math import ceil
+from qiskit_ibm_runtime import QiskitRuntimeService
+from qiskit import QuantumCircuit
+import matplotlib.pyplot as plt
+from qiskit.visualization import plot_histogram
+from qiskit.transpiler import generate_preset_pass_manager
+from qiskit_ibm_runtime import SamplerV2 as Sampler
+from qiskit_ibm_runtime.fake_provider import FakeBelemV2
+from qiskit.quantum_info import Statevector
+from qiskit.circuit.library import QFTGate
+
+# Consider the wavefunction over the interval [-d, d] at grid distance dx.
+dx = np.pi/8
+# dt = 0.05
+d = np.pi
+length = 2*d
+num_qubits = ceil(np.log2(length/dx + 1))
+
+service = QiskitRuntimeService()
+# backend = service.least_busy(simulator=False, operational=True)
+backend = FakeBelemV2()
+
+def kinetic(n, dt):
+    qc = QuantumCircuit(n)
+    qc.compose(QFTGate(n).inverse(), inplace=True)
+
+    phase = (np.pi/length)**2
+    for j in range(n):
+        for l in range(j+1, n):
+            qc.rzz(2**(j+l+2)*phase*dt, j, l)
+    for j in range(n):
+        qc.rz(2**(j+2)*phase*dt, j)
+
+    qc.compose(QFTGate(n), inplace=True)
+    return qc
+
+# The kinetic energy circuit is the same in all cases, so we don't need to let
+# it vary by passing it into the function.
+def get_sim_circuit(initial_statevector, potential_qc, dt, backend):
+    qc = QuantumCircuit(num_qubits)
+    qc.initialize(initial_statevector)
+    qc.compose(kinetic(num_qubits, dt), inplace=True)
+    qc.compose(potential_qc, inplace=True)
+    qc.measure_all()
+
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=1)
+    isa_circuit = pm.run(qc)
+    # isa_circuit.draw("latex", filename="isa_zp.png")
+    return isa_circuit
+
+
+def sim(initial_statevector, potential_qc, dt, backend):
+    sim = get_sim_circuit(initial_statevector, potential_qc, dt, backend)
+    sampler = Sampler(mode=backend)
+    sampler.options.default_shots = 256 
+
+    job = sampler.run([sim])
+    # print(f"Job ID: {job.job_id()}")
+    counts = job.result()[0].data.meas.get_counts()
+
+    # Fill counts with all possible measurement outcomes; by default 
+    # outcomes that are not observed are not included in the dict.
+    for k in range(2**num_qubits):
+        k_str = format(k, f"0{num_qubits}b")
+        if k_str not in counts:
+            counts[k_str] = 0
+
+    return counts
+
+mu = 0
+sigma = 0.3
+momentum = 3
+dt = 0.01
+
+x = np.linspace(-d, d, num=2**num_qubits)
+
+psi_0 = np.exp(-(x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * x)
+psi_0 /= np.linalg.norm(psi_0)
+initial_statevector = Statevector(psi_0)
+
+for dt in [x/100 for x in range(15)]:
+    counts = sim(initial_statevector, QuantumCircuit(num_qubits), dt, backend)
+    plot_histogram(counts, title=f"after time {dt}")
+plt.show()
