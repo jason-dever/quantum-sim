@@ -10,6 +10,7 @@ from qiskit_ibm_runtime import SamplerV2 as Sampler
 from qiskit_ibm_runtime.fake_provider import FakeBelemV2
 from qiskit.quantum_info import Statevector
 from qiskit.circuit.library import QFTGate
+from qiskit.visualization import plot_state_city
 
 # Consider the wavefunction over the interval [-d, d] at grid distance dx.
 dx = np.pi/8
@@ -63,7 +64,7 @@ def get_sim_circuit(potential_qc, dt, final_t):
 def sim(initial_statevector, potential_qc, dt, final_t, backend):
     sim = QuantumCircuit(num_qubits)
     sim.initialize(initial_statevector)
-    sim.compose(get_sim_circuit(potential_qc, dt, final_t), inline=True)
+    sim.compose(get_sim_circuit(potential_qc, dt, final_t), inplace=True)
     sim.measure_all()
 
     pm = generate_preset_pass_manager(backend=backend, optimization_level=1)
@@ -73,7 +74,7 @@ def sim(initial_statevector, potential_qc, dt, final_t, backend):
     sampler.options.default_shots = 512  
 
     job = sampler.run([isa_circuit])
-    print(f"Job ID: {job.job_id()}")
+    # print(f"Job ID: {job.job_id()}")
     counts = job.result()[0].data.meas.get_counts()
 
     # Fill counts with all possible measurement outcomes; by default 
@@ -96,7 +97,13 @@ psi_0 = np.exp(-(x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * x)
 psi_0 /= np.linalg.norm(psi_0)
 initial_statevector = Statevector(psi_0)
 
-for t in [x/20 for x in range(6)]:
+# qc = QuantumCircuit(num_qubits)
+# qc.initialize(initial_statevector)
+# qc.compose(get_sim_circuit(QuantumCircuit(num_qubits), 0.05, 0.05), inplace=True)
+# final = Statevector.from_circuit(qc)
+# plot_state_city(final)
+
+for t in [x/20 for x in range(1, 6)]:
     counts = sim(initial_statevector, QuantumCircuit(num_qubits), dt, t, backend)
     plot_histogram(counts, title=f"after time {t} (p=0)")
 plt.show()
