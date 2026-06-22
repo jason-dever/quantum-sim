@@ -89,7 +89,6 @@ def sim(initial_statevector, potential_qc, dt, final_t, backend):
 mu = 0
 sigma = 0.3
 momentum = 0
-dt = 0.8
 
 x = np.linspace(-d, d, num=2**num_qubits)
 
@@ -104,6 +103,6 @@ initial_statevector = Statevector(psi_0)
 # plot_state_city(final)
 
 for t in [x/20 for x in range(1, 6)]:
-    counts = sim(initial_statevector, QuantumCircuit(num_qubits), dt, t, backend)
+    counts = sim(initial_statevector, QuantumCircuit(num_qubits), t, t, backend)
     plot_histogram(counts, title=f"after time {t} (p=0)")
 plt.show()
