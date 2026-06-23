@@ -61,13 +61,13 @@ def get_sim_circuit(potential_qc, dt, final_t):
     return qc
 
 
-def approx_sim(initial_statevector, potential_qc, dt, final_t, backend, num_shots=512):
+def approx_sim(initial_statevector, potential_qc, dt, final_t, backend, num_shots=256):
     sim = QuantumCircuit(num_qubits)
     sim.initialize(initial_statevector)
     sim.compose(get_sim_circuit(potential_qc, dt, final_t), inplace=True)
     sim.measure_all()
 
-    pm = generate_preset_pass_manager(backend=backend, optimization_level=1)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=3)
     isa_circuit = pm.run(sim)
 
     sampler = Sampler(mode=backend)
@@ -92,9 +92,13 @@ def exact_sim(initial_statevector, potential_qc, dt, final_t):
     sim.compose(get_sim_circuit(potential_qc, dt, final_t), inplace=True)
     return Statevector.from_circuit(sim).probabilities()
 
+def analytic_solution_no_potential(mu, momentum, x, t):
+    # For sigma = 1/np.sqrt(2)
+    return np.sqrt(1j/(-4*t+1j))*np.exp((-1j*x**2 - momentum*x + momentum**2 * t)/(-4*t+1j))
+
 mu = 0
-sigma = 0.3
-momentum = 0
+sigma = 1/np.sqrt(2)
+momentum = -2*np.pi
 
 dx = 2*d/N
 x = np.linspace(-d, d, num=N, endpoint=False)
@@ -104,8 +108,9 @@ j_idx = np.arange(N)
 psi *= (-1)**j_idx
 psi /= np.linalg.norm(psi)
 
-fig, axes = plt.subplots(3, 3, figsize=(15, 8))
-for ax, t in zip(axes.flat, [x/20 for x in range(9)]):
+
+fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+for ax, t in zip(axes.flat, [x/10 for x in range(6)]):
     potential = QuantumCircuit(num_qubits)
     probs = exact_sim(psi, potential, t, t)
 
@@ -113,5 +118,12 @@ for ax, t in zip(axes.flat, [x/20 for x in range(9)]):
     ax.set_xlabel("position")
     ax.set_ylabel("probability")
     ax.set_title(f"t={t} (p={momentum})")
+
+    num_pts = 500
+    x_fine = np.linspace(-d, d, num_pts, endpoint=False)
+    curve = abs(analytic_solution_no_potential(mu, momentum, x_fine, t))**2
+    curve /= curve.sum()
+    ax.plot(x_fine, curve*num_pts/N, "r-")
+
 plt.tight_layout()
 plt.show()
