@@ -99,15 +99,15 @@ momentum = 0
 dx = 2*d/N
 x = np.linspace(-d, d, num=N, endpoint=False)
 
-j_idx = np.arange(N)
 psi = np.exp(-(x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * x)
+j_idx = np.arange(N)
 psi *= (-1)**j_idx
 psi /= np.linalg.norm(psi)
 
 fig, axes = plt.subplots(3, 3, figsize=(15, 8))
 for ax, t in zip(axes.flat, [x/20 for x in range(9)]):
-    qc = QuantumCircuit(num_qubits)
-    probs = exact_sim(psi, qc, t, t)
+    potential = QuantumCircuit(num_qubits)
+    probs = exact_sim(psi, potential, t, t)
 
     ax.bar(x, probs, width=dx*0.75)
     ax.set_xlabel("position")
