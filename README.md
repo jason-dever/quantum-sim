@@ -36,5 +36,10 @@ conditions. The error you see here is because we are now approximating the solut
 This can be minimized by taking smaller timesteps (more iterations of the circuit). Following the steps outlined
 in the typeset pdf, one could implement a larger set of potentials, but there is nothing theoretically more interesting,
 at least with respect to the implementation, to be found there.
+## Usage
+After installing the required packages, this should work out of the box. One can plug and play values
+for momentum, expected value, uncertainty, and which potential to be simulated. Plots of the same form
+as in this README will be drawn. The only caveat here is that the analytical solutions are only partially
+implemented, but this is detailed briefly in the code.
 ## Future directions
 Next task in the docket is to solve the one-dimensional Dirac equation.
