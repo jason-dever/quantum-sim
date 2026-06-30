@@ -66,7 +66,6 @@ def get_sim_circuit(potential_qc, dt, final_t):
 
     return qc
 
-
 def approx_sim(initial_statevector, potential_qc, dt, final_t, backend, num_shots=256):
     sim = QuantumCircuit(num_qubits)
     sim.initialize(initial_statevector)
@@ -112,7 +111,6 @@ def analytic_solution_qho(initial_mu, initial_sigma, x, t):
     Sigma2_t = (initial_sigma * np.cos(omega*t))**2 + (1/initial_sigma * np.sin(omega*t))**2
     return np.exp(-(x-initial_mu*np.cos(omega*t))**2/Sigma2_t)
 
-
 mu = 4
 sigma = 1/np.sqrt(2)
 momentum = 0
@@ -126,7 +124,6 @@ psi = np.exp(-(x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * x)
 j_idx = np.arange(N)
 psi *= (-1)**j_idx
 psi /= np.linalg.norm(psi)
-
 
 fig, axes = plt.subplots(2, 3, figsize=(15, 8))
 for ax, t in zip(axes.flat, [x*0.24 for x in range(6)]):
@@ -145,7 +142,7 @@ for ax, t in zip(axes.flat, [x*0.24 for x in range(6)]):
             potential_qc = QuantumCircuit(num_qubits)
             ideal_curve = analytic_solution_free(momentum, x_fine, t)
             dt = t # No need for Trotter in this case: we can compute for exact t
-        case default:
+        case _:
             print("what?")
 
     probs = exact_sim(psi, potential_qc, dt, t)
