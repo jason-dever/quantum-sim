@@ -12,8 +12,8 @@ from qiskit.quantum_info import Statevector
 from qiskit.circuit.library import QFTGate
 from qiskit.visualization import plot_state_city
 
-# Consider the wavefunction over the interval [-d, d] at grid distance dx.
-num_qubits = 5
+# Consider the wavefunction over the interval [-d, d] at grid distance dx = length/N.
+num_qubits = 6
 d = 2*np.pi
 length = 2*d
 N = 2**num_qubits
@@ -28,12 +28,19 @@ def kinetic(n, dt):
 
     phase = (np.pi/length)**2
     for j in range(n):
+        qc.rz(2**(j+2)*phase*dt, j)
         for l in range(j+1, n):
             qc.rzz(2**(j+l+2)*phase*dt, j, l)
-    for j in range(n):
-        qc.rz(2**(j+2)*phase*dt, j)
 
     qc.compose(QFTGate(n), inplace=True)
+    return qc
+
+def harmonic_potential(n, dt):
+    qc = QuantumCircuit(n)
+    for j in range(n):
+        qc.rz(2**j * dx * dt * (2*d + dx*(1-2**n)), j)
+        for l in range(j+1, n):
+            qc.rzz(2**(j+l) * dx**2 * dt, j, l)
     return qc
 
 # The kinetic energy circuit is the same in all cases, so we don't need to let
@@ -92,38 +99,41 @@ def exact_sim(initial_statevector, potential_qc, dt, final_t):
     sim.compose(get_sim_circuit(potential_qc, dt, final_t), inplace=True)
     return Statevector.from_circuit(sim).probabilities()
 
-def analytic_solution_no_potential(mu, momentum, x, t):
-    # For sigma = 1/np.sqrt(2)
+def analytic_solution_free(momentum, x, t):
+    # For sigma = 1/np.sqrt(2), mu = 0
     return np.sqrt(1j/(-4*t+1j))*np.exp((-1j*x**2 - momentum*x + momentum**2 * t)/(-4*t+1j))
 
-mu = 0
+mu = 4
 sigma = 1/np.sqrt(2)
-momentum = -2*np.pi
+momentum = 0
 
-dx = 2*d/N
+dx = length/N
 x = np.linspace(-d, d, num=N, endpoint=False)
 
+# The curve of measurement probabilities will be a Gaussian with
+# mean mu and standard deviation sigma/sqrt(2).
 psi = np.exp(-(x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * x)
 j_idx = np.arange(N)
 psi *= (-1)**j_idx
 psi /= np.linalg.norm(psi)
 
 
-fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-for ax, t in zip(axes.flat, [x/10 for x in range(6)]):
-    potential = QuantumCircuit(num_qubits)
-    probs = exact_sim(psi, potential, t, t)
+fig, axes = plt.subplots(3, 3, figsize=(15, 8))
+for ax, t in zip(axes.flat, [x/2 for x in range(9)]):
+    dt = t/200
+    potential = harmonic_potential(num_qubits, dt)
+    probs = exact_sim(psi, potential, dt, t)
 
     ax.bar(x, probs, width=dx*0.75)
     ax.set_xlabel("position")
     ax.set_ylabel("probability")
     ax.set_title(f"t={t} (p={momentum})")
 
-    num_pts = 500
-    x_fine = np.linspace(-d, d, num_pts, endpoint=False)
-    curve = abs(analytic_solution_no_potential(mu, momentum, x_fine, t))**2
-    curve /= curve.sum()
-    ax.plot(x_fine, curve*num_pts/N, "r-")
+    # num_pts = 500
+    # x_fine = np.linspace(-d, d, num_pts, endpoint=False)
+    # curve = abs(analytic_solution_free(momentum, x_fine, t))**2
+    # curve /= curve.sum()
+    # ax.plot(x_fine, curve*num_pts/N, "r-")
 
 plt.tight_layout()
 plt.show()
