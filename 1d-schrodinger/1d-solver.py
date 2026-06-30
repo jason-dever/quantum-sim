@@ -1,16 +1,13 @@
 import numpy as np
-import time
-from math import ceil, floor
+from math import floor
 from qiskit_ibm_runtime import QiskitRuntimeService
 from qiskit import QuantumCircuit
 import matplotlib.pyplot as plt
-from qiskit.visualization import plot_histogram
 from qiskit.transpiler import generate_preset_pass_manager
 from qiskit_ibm_runtime import SamplerV2 as Sampler
 from qiskit_ibm_runtime.fake_provider import FakeCasablancaV2
 from qiskit.quantum_info import Statevector
 from qiskit.circuit.library import QFTGate
-from qiskit.visualization import plot_state_city
 
 # Consider the wavefunction over the interval [-d, d] at grid distance dx = length/N.
 num_qubits = 6
@@ -18,7 +15,8 @@ d = 2*np.pi
 length = 2*d
 N = 2**num_qubits
 
-service = QiskitRuntimeService()
+# Uncomment these two and comment the last one to run on an IBM QPU
+# service = QiskitRuntimeService()
 # backend = service.least_busy(simulator=False, operational=True)
 backend = FakeCasablancaV2()
 
@@ -36,6 +34,7 @@ def kinetic(n, dt):
     return qc
 
 def harmonic_potential(n, dt):
+    dx = length/(2**n)
     qc = QuantumCircuit(n)
     for j in range(n):
         qc.rz(2**j * dx * dt * (2*d + dx*(1-2**n)), j)
@@ -114,9 +113,9 @@ def analytic_solution_qho(initial_mu, initial_sigma, x, t):
     return np.exp(-(x-initial_mu*np.cos(omega*t))**2/Sigma2_t)
 
 
-mu = 0
+mu = 4
 sigma = 1/np.sqrt(2)
-momentum = 3
+momentum = 0
 
 dx = length/N
 x = np.linspace(-d, d, num=N, endpoint=False)
@@ -129,35 +128,37 @@ psi *= (-1)**j_idx
 psi /= np.linalg.norm(psi)
 
 
-fig, axes = plt.subplots(3, 3, figsize=(15, 8))
-for ax, t in zip(axes.flat, [x/2 for x in range(9)]):
-    # These two variables are used to plot the ideal curve from the analytic solution (if desired).
+fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+for ax, t in zip(axes.flat, [x*0.24 for x in range(6)]):
+    # These two variables are used to plot the ideal curve from the analytical solution (if desired).
     num_pts = 500
     x_fine = np.linspace(-d, d, num_pts, endpoint=False)
 
-    potential = "free"
+    potential = "qho"
     dt = t/200
 
     match potential:
         case "qho":
             potential_qc = harmonic_potential(num_qubits, dt)
             ideal_curve = analytic_solution_qho(mu, sigma, x_fine, t)
-        case default: # Free particle
+        case "no": # Free particle
             potential_qc = QuantumCircuit(num_qubits)
             ideal_curve = analytic_solution_free(momentum, x_fine, t)
             dt = t # No need for Trotter in this case: we can compute for exact t
+        case default:
+            print("what?")
 
     probs = exact_sim(psi, potential_qc, dt, t)
 
-    ax.bar(x, probs, width=dx*0.75)
+    ax.bar(x, probs, width=dx*0.7)
     ax.set_xlabel("position")
     ax.set_ylabel("probability")
-    ax.set_title(f"t={t} (p={momentum})")
+    ax.set_title(f"t={t} (initial p={momentum}), {potential} potential")
 
     # Note that the analytic solutions are implemented for only 
     # a set of special cases (see each function for which ones),
     # so this plot is only accurate in those situations.
-    do_plot_ideal = False
+    do_plot_ideal = True
     if do_plot_ideal: 
         ideal_curve /= ideal_curve.sum()
         ax.plot(x_fine, ideal_curve*num_pts/N, "r-")
