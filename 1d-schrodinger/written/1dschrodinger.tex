@@ -1,0 +1,112 @@
+\documentclass[10pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{braket}
+\usepackage{hyperref}
+\usepackage{setspace}
+
+\doublespacing
+\allowdisplaybreaks
+
+\begin{document}
+\section*{Discretization and Storage}
+To store an arbitrary 1d state on qubits we do two things: we first restrict the domain of our wavefunction,
+considering it on an interval $[-d, d]$ for $d > 0$, and we also discretize the
+interval at steps $\Delta x > 0$. Now our state, rather than being of the form
+$\ket{\psi(t)} = \int_{\mathbb{R}} \psi(x, t) \ket{x} dx$, is a normalized
+Riemann sum $\ket{\hat{\psi}(t)} = \sum_{k = -\frac{d}{\Delta x}}^{\frac{d}{\Delta x}} a_k \ket{k \Delta x}$
+($a_k \in \mathbb{C}$). We let $N = \frac{2d}{\Delta x}+1$ denote the number of grid positions.
+This can be stored on $n = \lceil \log_2\left(N\right) \rceil = O\left(\log \left(\frac{d}{\Delta x} 
+\right) \right)$ qubits with the computational basis state $\ket{k}$ representing
+the position $-d + k \Delta x$, where $k$ is interpreted as an unsigned integer.
+\section*{Free Particle}
+In general, we are trying to solve $i \partial_t \psi = H \psi$, where 
+$H = -\partial_x^2 + V(x)$. In the zero potential case, this simplifies to the PDE
+$i \partial_t \psi(x, t) = -\partial_x^2 \psi(x, t)$. Applying the Fourier transform
+$\mathcal{F}$ in x to both sides, we get $i \partial_t \mathcal{F}(\psi)(\xi, t) = \xi^2 \mathcal{F}(\psi)(\xi, t)$.
+This gives the solution in Fourier space $\mathcal{F}(\psi)(\xi, t) = e^{-i \xi^2}\mathcal{F}(\psi)(\xi, 0)$.
+Applying the inverse Fourier transform, we have $\psi(x, t) = \mathcal{F}^{-1}\left(e^{-i \xi^2} \mathcal{F}(\psi)(\xi, 0)\right)$.
+For the discretization on qubits, we use the quantum Fourier transform, mapping
+$\ket{k} \mapsto QFT e^{-i \xi_k^2 t} QFT^\dag \ket{k}$. Note that we apply
+the inverse quantum Fourier transform first; this is because, due to unfortunate
+choice of convention, $QFT^\dag: \ket{k} \mapsto \frac{1}{\sqrt{N}} \sum_{j=0}^{N-1} e^\frac{-2\pi ijk}{N} \ket{k}$
+is the appropriate choice of approximation for $\mathcal{F}(\psi)(\xi, t) = \frac{1}{\sqrt{2\pi}}\int_{\mathbb{R}} e^{-i \xi x} \psi(x, t) dx$.
+The choice of $\xi_k$ is the only decision here I can't really justify, but from \href{https://arxiv.org/pdf/1307.3318}{this paper},
+we take $\Delta \xi = \frac{\pi}{d}$ and $\xi_0 = -\frac{\pi N}{2d}$, hence $\xi_k = -\frac{\pi N}{2d} + k \Delta \xi 
+= \frac{\pi}{2d}(2k - N)$. 
+\newline
+We consider the quantum circuit implementation of $e^{-i \xi_k^2}$. Note that the
+operator $A$ such that $e^A \ket{k} = e^k \ket{k}$ is given by
+\begin{align*}
+    A &= \sum_{j=0}^{n=1} \frac{I - Z_j}{2}2^j \text{\quad where $Z_j$ is the Pauli $Z$ on the $j$th qubit} \\
+      &= \frac{1}{2} \sum_{j=0}^{n-1} 2^j(I - Z_j) \\
+      &= \frac{1}{2}\left((2^n-1)I - \sum_{j=0}^{n-1} 2^j Z_j\right)
+\end{align*}
+Now that we have an idea of implementing $e^k$, consider $2k - N = (2^n - 1)I - \sum_{j=0}^{n-1} 2^j Z_j - NI
+= -(I + \sum_{j=0}^{n-1}2^j Z_j)$, since $N = 2^n$. Hence,
+\begin{align*}
+    (2k-N)^2 &= I^2 + 2 \sum_{j=0}^{n-1} 2^j Z_j + \left( \sum_{j=0}^{n-1} 2^j Z_j \right) \left( \sum_{l=0}^{n-1} 2^l Z_l \right) \\
+             &= I + \sum_{j=0}^{n-1} 2^{j+1} Z_j + \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} Z_j Z_l \\
+             &= I + \sum_{j=0}^{n-1} 2^{j+1} Z_j + \sum_{j=0}^{n-1} \sum_{l=j}^{n-1} 2^{j+l+1} Z_j Z_l \text{\quad since $Z_j Z_l = Z_l Z_j$}
+\end{align*}
+Finally we derive the gate decomposition for this operation. Letting $L = 2d$,
+\begin{align*}
+    e^{-i \xi_k^2 \Delta t} &= e^{-i \left(\frac{\pi}{L}(2k-N)\right)^2 \Delta t} \\
+                            &= \exp\left(-i \frac{\pi^2}{L^2} \Delta t\left(I + \sum_{j=0}^{n-1} 2^{j+1} Z_j + \sum_{j=0}^{n-1} \sum_{l=j}^{n-1} 2^{j+l+1} Z_j Z_l\right)\right) \\
+                            &\stackrel{(*)}{=} \left(\prod_{j=0}^{n-1} \exp\left( \frac{-i \pi^2 \Delta t}{L^2} 2^{j+1} Z_j \right)\right) \left( \prod_{j=0}^{n-1} \prod_{l=j+1}^{n-1} \exp\left(
+                            \frac{-i \pi^2 \Delta t}{L^2} 2^{j+l+1} Z_j Z_l \right)\right) \\
+                            &= \prod_{j=0}^{n-1} R_{Z_j}\left(2^{j+2} \frac{-i \pi^2}{L^2} \Delta t\right) \prod_{j=0}^{n-1} \prod_{l=j+1}^{n-1} R_{jl}\left(2^{j+l+2} \frac{-i \pi^2}{L^2} \Delta t\right) 
+                            \text{\quad by definition}
+\end{align*}
+$(*)$ up to global phase \newline
+$R_z$ and $R_{zz}$ gates are easily accessible on a quantum computer. This is the
+circuit returned by kinetic() of 1d-solver.py.
+\section*{Quantum Harmonic Oscillator}
+As before, we are trying to solve $i \partial_t \psi = H \psi$, where
+$H = \frac{p^2}{2m} + V$, where $p = -i \hbar \partial_x$ and $V$ is the
+potential term. However, instead of $V \equiv 0$, we now consider the quantum
+harmonic oscillator, with $V(x) = \frac{1}{2} m \omega^2 x^2$. For simplicity
+of our units, we take $m = \frac{1}{2}$ (also do this in the previous section), $\hbar = 1$, and $\omega = 2$, thus hoping to solve
+the PDE $i \partial_t \psi = -\partial_x^2 \psi + x^2 \psi$. After discretization 
+of $\psi(x, 0)$ onto $n$ qubits, with $N = 2^n$ grid positions, we use the Trotter method, implementing $e^{-i p^2 \Delta t}
+e^{-i V(x) \Delta t}$ for $\Delta t$ small and iterating to our desired time $t$.
+Then $x_k^2 = (-d + k \Delta x)^2 = d^2 - 2d k \Delta x + k^2 \Delta x^2$, hence
+$e^{-i x_k^2 \Delta t} \overset{(*)}{=} e^{-i(-2d k \Delta x \Delta t)} e^{-i k^2 \Delta x^2 \Delta t}$, where I
+denote by $\overset{(*)}{=}$ equality up to global phase. Using the same decomposition
+of $k = \sum_{j=0}^{n-1} \frac{I - Z_j}{2} 2^j$ as in the kinetic term previously,
+\begin{align*}
+e^{-i(-2dk \Delta x) \Delta t} &= \exp \left(2id \Delta x \Delta t \sum_{j=0}^{n-1}\frac{I-Z_j}{2} 2^j \right) \\
+&= \exp \left(\sum_{j=0}^{n-1} i 2^j d \Delta x \Delta t(I-Z_j)\right) \\
+&\overset{(*)}{=} \exp \left(\sum_{j=0}^{n-1} -i 2^j d \Delta x \Delta t Z_j \right)
+\end{align*}
+Considering now the $k^2$ term,
+\begin{align*}
+    k^2 &= \left(\sum_{j=0}^{n-1}\frac{I - Z_j}{2} 2^j \right)^2 \\
+    &= \frac{1}{4} \left(\sum_{j=0}^{n-1} (I - Z_j)2^j \right) \left( \sum_{l=0}^{n-1} (I - Z_l)2^l \right) \\
+    &= \frac{1}{4} \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} (I-Z_j)(I-Z_l)2^{j+l} \\
+    &\overset{(*)}{=} \frac{1}{4} \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} (Z_j Z_l - Z_j - Z_l)2^{j+l} \\
+    &= \frac{1}{4}\left( \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} Z_j Z_l - \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} Z_j 
+    - \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} Z_l \right) \\
+    &\overset{(*)}{=} \frac{1}{2} \left( \sum_{j=0}^{n-1} \sum_{l=j+1}^{n-1} 2^{j+l} Z_j Z_l 
+    - \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} Z_j \right) \\
+    &= \sum_{j=0}^{n-1} \sum_{l=j+1}^{n-1} 2^{j+l-1} Z_j Z_l - \sum_{j=0}^{n-1} 2^{j-1}Z_j\sum_{l=0}^{n-1} 2^l \\
+    &= \sum_{j=0}^{n-1} \sum_{l=j+1}^{n-1} 2^{j+l-1} Z_j Z_l - \sum_{j=0}^{n-1} 2^{j-1}(2^n - 1)Z_j
+\end{align*}
+Thus we can derive the quantum gate decomposition for $e^{-i V(x) \Delta t}: \ket{k} \mapsto e^{-i x_k^2 \Delta t} \ket{k}$
+as follows:
+\begin{align*}
+    e^{-i V(x_k)} &\overset{(*)}{=} e^{-i(-2dk \Delta x) \Delta t} e^{-i k^2 \Delta x^2 \Delta t} \\
+    &= \exp\left(\sum_{j=0}^{n-1} -i 2^j d \Delta x \Delta t Z_j \right) 
+    \exp\left( -i \Delta x^2 \Delta t \left( \sum_{j=0}^{n-1} \sum_{l=j+1}^{n-1} 2^{j+l-1} Z_j Z_l - \sum_{j=0}^{n-1} 2^{j-1}(2^n - 1)Z_j \right) \right) \\
+    &= \exp\left( \sum_{j=0}^{n-1} -i \Delta x \Delta t 2^{j-1}(2d + \Delta x(1 - 2^n)) Z_j \right) \exp\left(-i \Delta x^2 \Delta t \sum_{j=0}^{n-1} \sum_{l=j+1}^{n-1} 2^{j+l-1} Z_j Z_l \right) \\
+    &= \prod_{j=0}^{n-1}\left( R_{Z_j}\left(2^j \Delta x \Delta t(2d + \Delta x(1-N))\right) \prod_{l=j+1}^{n-1} R_{Z_{jl}} \left( 2^{j+l} \Delta x^2 \Delta t \right) \right)
+\end{align*}
+Note that all of the operators we are concerned with in implementing the potential
+are simultaneously diagonalized, so it is valid to split exponentials of sums, as
+well as noting that gate order does not matter. 
+\section*{Analytical Solutions}
+The analytical solutions used to verify the correctness of this algorithm are sourced
+from \href{https://arxiv.org/pdf/quant-ph/0307046}{this paper} (qho) and Journal of Computational Physics 188 (2003) 157–17
+(free particle).
+\end{document}
