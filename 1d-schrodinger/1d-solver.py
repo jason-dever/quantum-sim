@@ -99,6 +99,9 @@ def exact_sim(initial_statevector, potential_qc, dt, final_t):
     sim.compose(get_sim_circuit(potential_qc, dt, final_t), inplace=True)
     return Statevector.from_circuit(sim).probabilities()
 
+# The analytic solutions don't need normalization here
+# because we have to normalize again before we plot anyway.
+
 def analytic_solution_free(momentum, x, t):
     # For intial sigma = 1/np.sqrt(2), mu = 0
     return abs(np.sqrt(1j/(-4*t+1j))*np.exp((-1j*x**2 - momentum*x + momentum**2 * t)/(-4*t+1j)))**2
@@ -111,15 +114,15 @@ def analytic_solution_qho(initial_mu, initial_sigma, x, t):
     return np.exp(-(x-initial_mu*np.cos(omega*t))**2/Sigma2_t)
 
 
-mu = 4
+mu = 0
 sigma = 1/np.sqrt(2)
-momentum = 0
+momentum = 3
 
 dx = length/N
 x = np.linspace(-d, d, num=N, endpoint=False)
 
-# The curve of measurement probabilities will be a Gaussian with
-# mean mu and standard deviation (uncertainty of position) sigma/sqrt(2).
+# The curve of measurement probabilities, ie abs(psi)**2, will be a Gaussian with
+# mean mu and standard deviation sigma/sqrt(2).
 psi = np.exp(-(x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * x)
 j_idx = np.arange(N)
 psi *= (-1)**j_idx
@@ -128,22 +131,36 @@ psi /= np.linalg.norm(psi)
 
 fig, axes = plt.subplots(3, 3, figsize=(15, 8))
 for ax, t in zip(axes.flat, [x/2 for x in range(9)]):
+    # These two variables are used to plot the ideal curve from the analytic solution (if desired).
+    num_pts = 500
+    x_fine = np.linspace(-d, d, num_pts, endpoint=False)
+
+    potential = "free"
     dt = t/200
-    potential = harmonic_potential(num_qubits, dt)
-    # potential = QuantumCircuit(num_qubits)
-    probs = exact_sim(psi, potential, dt, t)
+
+    match potential:
+        case "qho":
+            potential_qc = harmonic_potential(num_qubits, dt)
+            ideal_curve = analytic_solution_qho(mu, sigma, x_fine, t)
+        case default: # Free particle
+            potential_qc = QuantumCircuit(num_qubits)
+            ideal_curve = analytic_solution_free(momentum, x_fine, t)
+            dt = t # No need for Trotter in this case: we can compute for exact t
+
+    probs = exact_sim(psi, potential_qc, dt, t)
 
     ax.bar(x, probs, width=dx*0.75)
     ax.set_xlabel("position")
     ax.set_ylabel("probability")
     ax.set_title(f"t={t} (p={momentum})")
 
-    num_pts = 500
-    x_fine = np.linspace(-d, d, num_pts, endpoint=False)
-    # curve = analytic_solution_free(momentum, x_fine, t)
-    curve = analytic_solution_qho(mu, sigma, x_fine, t)
-    curve /= curve.sum()
-    ax.plot(x_fine, curve*num_pts/N, "r-")
+    # Note that the analytic solutions are implemented for only 
+    # a set of special cases (see each function for which ones),
+    # so this plot is only accurate in those situations.
+    do_plot_ideal = False
+    if do_plot_ideal: 
+        ideal_curve /= ideal_curve.sum()
+        ax.plot(x_fine, ideal_curve*num_pts/N, "r-")
 
 plt.tight_layout()
 plt.show()
