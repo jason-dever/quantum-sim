@@ -1,5 +1,5 @@
 # quantum-sim
-This hopes to be a collection of Qiskit quantum simulation algorithms implemented by me.
+This is a collection of Qiskit quantum simulation algorithms implemented by me.
 ## 1D Schrödinger Equation
 In 1d-schrodinger/ I solve a small set of one-dimensional time-dependent Schrödinger equations
 $i \hbar \partial_t \psi(x, t) = H \psi(x, t)$, where $H = \frac{-\hbar^2}{2m} \partial_x^2 + V(x)$.
@@ -7,13 +7,14 @@ In particular, for simplicity of units, we take $\hbar = 1$ and $m = \frac{1}{2}
 the equation to $i \partial_t \psi(x, t) = -\partial_x^2 \psi(x, t) + V(x) \psi(x, t)$. Implemented
 are the case for a free particle ($V \equiv 0$), and the quantum harmonic oscillator ($V(x) = x^2$),
 both with initial state a Gaussian wavepacket.  Along with implementation details, derivations for every 
-quantum circuit in the code are given as .tex files, as well as rendered LaTeX.
+quantum circuit in the code are given as .tex files, as well as rendered LaTeX [here](1d-schrodinger/written/1dschrodinger.pdf).
 
 In ```approx_sim()```, one can approximate the probability amplitudes of the quantum state after time t
 using either a simulator or a physical IBM QPU (depending on choice of backend) and taking measurements.
 Alternatively, with solid performance one can extract the probabilites directly with ```exact_sim()```.
 Below are extracted probabilities compared against the analytical solution (red curve) for the free particle:
-observe the dispersion of the wavepacket.
+observe the dispersion of the wavepacket. Note that ```approx_sim()``` requires a configured IBM account
+and API token if you want to run on quantum hardware.
 
 ![free particle, no momentum](1d-schrodinger/plots/free-sim-p=0.png)
 
