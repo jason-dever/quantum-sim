@@ -1,0 +1,4 @@
+numpy
+qiskit[visualization]
+matplotlib
+qiskit-ibm-runtime
