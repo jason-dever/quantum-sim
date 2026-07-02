@@ -10,15 +10,15 @@ from qiskit.quantum_info import Statevector
 from qiskit.circuit.library import QFTGate
 
 # Consider the wavefunction over the interval [-d, d] at grid distance dx = length/N.
-num_qubits = 6
+num_qubits = 5
 d = 2*np.pi
 length = 2*d
 N = 2**num_qubits
 
 # Uncomment these two and comment the last one to run on an IBM QPU
-# service = QiskitRuntimeService()
-# backend = service.least_busy(simulator=False, operational=True)
-backend = FakeCasablancaV2()
+service = QiskitRuntimeService()
+backend = service.least_busy(simulator=False, operational=True)
+# backend = FakeCasablancaV2()
 
 def kinetic(n, dt):
     qc = QuantumCircuit(n)
@@ -79,7 +79,7 @@ def approx_sim(initial_statevector, potential_qc, dt, final_t, backend, num_shot
     sampler.options.default_shots = num_shots  
 
     job = sampler.run([isa_circuit])
-    # print(f"Job ID: {job.job_id()}")
+    print(f"Job ID: {job.job_id()}")
     counts = job.result()[0].data.meas.get_counts()
 
     probs = []
@@ -111,7 +111,7 @@ def analytic_solution_qho(initial_mu, initial_sigma, x, t):
     Sigma2_t = (initial_sigma * np.cos(omega*t))**2 + (1/initial_sigma * np.sin(omega*t))**2
     return np.exp(-(x-initial_mu*np.cos(omega*t))**2/Sigma2_t)
 
-mu = 4
+mu = np.pi
 sigma = 1/np.sqrt(2)
 momentum = 0
 
@@ -125,14 +125,15 @@ j_idx = np.arange(N)
 psi *= (-1)**j_idx
 psi /= np.linalg.norm(psi)
 
-fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-for ax, t in zip(axes.flat, [x*0.24 for x in range(6)]):
+fig, axes = plt.subplots(1, 1, squeeze=False, figsize=(15, 8))
+for ax, t in zip(axes.flat, [1.6]):
     # These two variables are used to plot the ideal curve from the analytical solution (if desired).
     num_pts = 500
     x_fine = np.linspace(-d, d, num_pts, endpoint=False)
 
     potential = "qho"
-    dt = t/200
+    num_steps = 12
+    dt = t/num_steps
 
     match potential:
         case "qho":
@@ -141,18 +142,18 @@ for ax, t in zip(axes.flat, [x*0.24 for x in range(6)]):
         case "no": # Free particle
             potential_qc = QuantumCircuit(num_qubits)
             ideal_curve = analytic_solution_free(momentum, x_fine, t)
-            dt = t # No need for Trotter in this case: we can compute for exact t
+            dt = t # No need for splitting in this case: we can compute for exact t
         case _:
             print("what?")
 
-    probs = exact_sim(psi, potential_qc, dt, t)
+    probs = approx_sim(psi, potential_qc, dt, t, backend=backend, num_shots=8192)
 
     ax.bar(x, probs, width=dx*0.7)
     ax.set_xlabel("position")
     ax.set_ylabel("probability")
     ax.set_title(f"t={t} (initial p={momentum}), {potential} potential")
 
-    # Note that the analytic solutions are implemented for only 
+    # Note that the analytical solutions are implemented for only 
     # a set of special cases (see each function for which ones),
     # so this plot is only accurate in those situations.
     do_plot_ideal = True
