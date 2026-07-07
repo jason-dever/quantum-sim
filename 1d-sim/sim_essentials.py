@@ -1,0 +1,75 @@
+from collections.abc import Callable
+import numpy as np
+from qiskit.quantum_info import Statevector
+from qiskit_ibm_runtime import SamplerV2 as Sampler
+from math import floor
+from dataclasses import dataclass
+from qiskit import QuantumCircuit
+from qiskit.transpiler import generate_preset_pass_manager
+
+@dataclass(frozen=True)
+class Grid: # This is a centralized config object for discretizing a 1D grid.
+    num_qubits: int
+    d: float # Considering the wavefunction on the interval [-d, d] at steps dx.
+
+    @property
+    def length(self) -> float:
+        return 2*self.d
+
+    @property
+    def N(self) -> int: # Number of grid positions
+        return 2**self.num_qubits
+
+    @property
+    def dx(self) -> float:
+        return self.length/self.N
+
+    @property
+    def x(self) -> np.ndarray:
+        return np.linspace(-self.d, self.d, num=self.N, endpoint=False)
+
+    @property
+    def fftshift_correction(self) -> np.ndarray:
+        return (-1)**np.arange(self.N)
+
+def get_sim_circuit(grid: Grid, get_one_iter: Callable[[Grid, QuantumCircuit, float], QuantumCircuit], potential: QuantumCircuit, dt, final_t) -> QuantumCircuit:
+    qc = QuantumCircuit(grid.num_qubits)
+    num_iter = 0 if final_t == 0 else floor(final_t/dt)
+
+    # Using operator splitting to approximately solve the equation, we take 
+    # timesteps of length dt from t=0 to the last step before/at final_t.
+    for _ in range(num_iter):
+        qc.compose(get_one_iter(grid, potential, dt), inplace=True)
+
+    return qc
+
+def approx_sim(grid: Grid, initial_statevector, dynamics: QuantumCircuit, backend, num_shots=256):
+    sim = QuantumCircuit(grid.num_qubits)
+    sim.initialize(initial_statevector)
+    sim.compose(dynamics, inplace=True)
+    sim.measure_all()
+
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=3)
+    isa_circuit = pm.run(sim)
+
+    sampler = Sampler(mode=backend)
+    sampler.options.default_shots = num_shots  
+
+    job = sampler.run([isa_circuit])
+    print(f"Job ID: {job.job_id()}")
+    counts = job.result()[0].data.meas.get_counts()
+
+    probs = []
+    for k in range(grid.N):
+        k_str = format(k, f"0{grid.num_qubits}b")
+
+        count = counts.get(k_str, 0)
+        probs.append(count/num_shots)
+
+    return probs
+
+def exact_sim(grid: Grid, initial_statevector, dynamics: QuantumCircuit):
+    sim = QuantumCircuit(grid.num_qubits)
+    sim.initialize(initial_statevector)
+    sim.compose(dynamics, inplace=True)
+    return Statevector.from_circuit(sim).probabilities()
