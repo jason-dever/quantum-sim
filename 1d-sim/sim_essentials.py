@@ -32,19 +32,19 @@ class Grid: # This is a centralized config object for discretizing a 1D grid.
     def fftshift_correction(self) -> np.ndarray:
         return (-1)**np.arange(self.N)
 
-def get_empty_sim(grid: Grid, n_spinor: int, measuring=False):
+def get_empty_sim(grid: Grid, num_spinor: int, measuring=False):
     pos_reg = QuantumRegister(grid.num_qubits, "pos")
     regs = [pos_reg]
 
-    if n_spinor: 
-        regs.append(QuantumRegister(n_spinor, "spin"))
+    if num_spinor: 
+        regs.append(QuantumRegister(num_spinor, "spin"))
     if measuring:
         regs.append(ClassicalRegister(grid.num_qubits, "meas"))
 
     return QuantumCircuit(*regs)
 
-def get_sim_circuit(grid: Grid, get_one_iter: Callable[[Grid, QuantumCircuit, float], QuantumCircuit], potential: QuantumCircuit, dt, final_t,  n_spinor=0) -> QuantumCircuit:
-    qc = get_empty_sim(grid, n_spinor)
+def get_sim_circuit(grid: Grid, get_one_iter: Callable[[Grid, QuantumCircuit, float], QuantumCircuit], potential: QuantumCircuit, dt, final_t,  num_spinor=0) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor)
     num_iter = 0 if final_t == 0 else floor(final_t/dt)
 
     # Using operator splitting to approximately solve the equation, we take 
@@ -54,8 +54,8 @@ def get_sim_circuit(grid: Grid, get_one_iter: Callable[[Grid, QuantumCircuit, fl
 
     return qc
 
-def approx_sim(grid: Grid, initial_statevector, dynamics: QuantumCircuit, backend, n_spinor=0, num_shots=256):
-    sim = get_empty_sim(grid, n_spinor, measuring=True)
+def approx_sim(grid: Grid, initial_statevector, dynamics: QuantumCircuit, backend, num_spinor=0, num_shots=256):
+    sim = get_empty_sim(grid, num_spinor, measuring=True)
     sim.initialize(initial_statevector)
     sim.compose(dynamics, inplace=True)
     
@@ -82,8 +82,8 @@ def approx_sim(grid: Grid, initial_statevector, dynamics: QuantumCircuit, backen
 
     return probs
 
-def exact_sim(grid: Grid, initial_statevector, dynamics: QuantumCircuit, n_spinor=0):
-    sim = get_empty_sim(grid, n_spinor)
+def exact_sim(grid: Grid, initial_statevector, dynamics: QuantumCircuit, num_spinor=0):
+    sim = get_empty_sim(grid, num_spinor)
     sim.initialize(initial_statevector)
     sim.compose(dynamics, inplace=True)
 
