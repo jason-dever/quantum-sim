@@ -23,22 +23,41 @@ def transport(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
 
     return qc
 
-grid = Grid(num_qubits=6, d=np.pi)
+grid = Grid(num_qubits=6, d=2*np.pi)
 
 mu = 0
-sigma = 0.5
-momentum = 0
+sigma_1 = 1/np.sqrt(2)
+sigma_2 = 0.3   
+momentum_1 = 3
+momentum_2 = -2
 
-psi_1 = np.exp(-(grid.x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * grid.x)
+psi_1 = np.exp(-(grid.x - mu)**2 / (2 * sigma_1**2)) * np.exp(1j * momentum_1 * grid.x)
 psi_1 *= grid.fftshift_correction
-psi = np.concatenate((psi_1, psi_1))
+psi_2 = np.exp(-(grid.x - mu)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * grid.x)
+psi_2 *= grid.fftshift_correction
+psi = np.concatenate((psi_1, psi_2))
 psi /= np.linalg.norm(psi)
 
 initial_statevector = Statevector(psi)
-qc = get_empty_sim(grid, num_spinor=1)
-qc.initialize(initial_statevector)
-qc.compose(transport(grid, 0.75), inplace=True)
-plot_histogram(Statevector.from_circuit(qc).probabilities_dict(qargs=list(range(grid.num_qubits))))
 
-# qc.draw("latex", filename="transport.png")
+fig, axes = plt.subplots(2, 3, squeeze=False, figsize=(15, 8))
+for ax, t in zip(axes.flat, [t for t in range(6)]):
+    num_pts = 500
+    x_fine = np.linspace(-grid.d, grid.d, num_pts, endpoint=False)
+    ideal_curve = abs(np.exp(-(x_fine - mu - t)**2 / (2 * sigma_1**2)))**2 + abs(np.exp(-(x_fine - mu + t)**2 / (2 * sigma_2**2)))**2
+    ideal_curve /= ideal_curve.sum()
+    ax.plot(x_fine, ideal_curve*num_pts/grid.N, "r-")
+
+    dynamics = get_empty_sim(grid, num_spinor=1)
+    dynamics.initialize(initial_statevector)
+    dynamics.compose(transport(grid, t), inplace=True)
+
+    probs = exact_sim(grid, psi, dynamics, num_spinor=1)
+
+    ax.bar(grid.x, probs, width=grid.dx*0.7)
+    ax.set_xlabel("position")
+    ax.set_ylabel("probability")
+    ax.set_title(f"t={t}")
+
+plt.tight_layout()
 plt.show()
