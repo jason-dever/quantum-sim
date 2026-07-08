@@ -16,19 +16,19 @@ Alternatively, with solid performance one can extract the probabilites directly 
 Below are extracted probabilities compared against the analytical solution (red curve) for the free particle:
 observe the dispersion of the wavepacket. 
 
-![free particle, no momentum](1d-schrodinger/plots/free-sim-p=0.png)
+![free particle, no momentum](1d-sim/plots/free-sim-p=0.png)
 
 See that the probabilities match the ideal curve for small t perfectly; since there is no potential term,
 we may implement the solution exactly. At large t the simulation begins to break down due to periodic boundary 
 conditions in the simulation being incompatible with the assumption of an infinite domain for the wavefunction. One can
 see this phenomena more clearly with a free particle of nonzero momentum.
 
-![free particle, momentum = pi](1d-schrodinger/plots/free-sim-p=pi.png)
+![free particle, momentum = pi](1d-sim/plots/free-sim-p=pi.png)
 
 For t large (not shown, but t > 2 should do it), the discretized wavefunction begins interfering with itself, 
 leading to very interesting behaviour for a free particle in a ring. Now considering the quantum harmonic oscillator,
 
-![qho](1d-schrodinger/plots/qho-sim.png)
+![qho](1d-sim/plots/qho-sim.png)
 
 The squeezed wavepacket does not disperse the way it does in the zero potential case; it "breathes"
 between greater and smaller uncertainty, so we don't have the same interaction with our periodic boundary 
