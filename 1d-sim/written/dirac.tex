@@ -1,0 +1,34 @@
+\documentclass[10pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{braket}
+\usepackage{hyperref}
+\usepackage{setspace}
+
+\doublespacing
+\allowdisplaybreaks
+
+\begin{document}
+\section*{Introduction}
+We hope to solve the equation 
+\begin{align*} 
+    i \partial_t \psi = (-i \sigma_x \partial_x + m \sigma_z + f(x))\psi
+\end{align*}
+where $\psi = (\psi_1 \psi_2)^T$, and $f$ is some potential function. In theory,
+this is only slightly different from Schrödinger. If we can store the spinor $\psi$,
+nearly all the same methods can be used to solve Dirac.
+\section*{Discretization and Storage}
+Fortunately, the problem of storing the spinor on qubits has a simple solution: we
+maintain a register to store position, as in Schrödinger, and add one qubit as
+an indicator. We discretize $\psi_1$ and $\psi_2$ into $\ket{\psi_1}$ and $\ket{\psi_2}$
+as we know how from Schrödinger, and store the state $\psi$ as
+\begin{align*}
+    \ket{\psi} &\propto \sum_{k=0}^{N-1} \left(\psi_1(x_k)\ket{0} + \psi_2(x_k)\ket{1}\right) \otimes \ket{k} \\
+               &= \ket{0} \otimes \left( \sum_{k=0}^{N-1} \psi_1(x_k) \ket{k} \right) + \ket{1} \otimes \left( \sum_{k=0}^{N-1} \psi_2(x_k) \ket{k} \right) \\
+               &\propto \ket{0} \otimes \ket{\psi_1} + \ket{1} \otimes \ket{\psi_2}
+\end{align*}
+With the indicator as the most significant qubit, this is equivalent to concatenating the
+column vectors of amplitudes for $\ket{\psi_1}$ and $\ket{\psi_2}$. 
+
+\end{document}
