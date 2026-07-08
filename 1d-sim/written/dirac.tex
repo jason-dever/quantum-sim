@@ -17,7 +17,8 @@ We hope to solve the equation
 \end{align*}
 where $\psi = (\psi_1 \psi_2)^T$, and $f$ is some potential function. In theory,
 this is only slightly different from Schrödinger. If we can store the spinor $\psi$,
-nearly all the same methods can be used to solve Dirac.
+nearly all the same methods can be used to solve Dirac; we will use Strang splitting
+to approximate the solution by solving each term individually.
 \section*{Discretization and Storage}
 Fortunately, the problem of storing the spinor on qubits has a simple solution: we
 maintain a register to store position, as in Schrödinger, and add one qubit as
@@ -30,5 +31,7 @@ as we know how from Schrödinger, and store the state $\psi$ as
 \end{align*}
 With the indicator as the most significant qubit, this is equivalent to concatenating the
 column vectors of amplitudes for $\ket{\psi_1}$ and $\ket{\psi_2}$. 
+\section*{Transport Term}
+
 
 \end{document}
