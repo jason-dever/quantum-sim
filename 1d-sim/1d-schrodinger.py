@@ -59,12 +59,12 @@ def analytical_solution_qho(initial_mu, initial_sigma, x, t):
     Sigma2_t = (initial_sigma * np.cos(omega*t))**2 + (1/initial_sigma * np.sin(omega*t))**2
     return np.exp(-(x-initial_mu*np.cos(omega*t))**2/Sigma2_t)
 
-grid = Grid(num_qubits=6, d=np.pi)
+grid = Grid(num_qubits=6, d=2*np.pi)
 
 # The curve of measurement probabilities, ie abs(psi)**2, will be a Gaussian with
 # mean mu and standard deviation sigma/sqrt(2).
 
-mu = 0
+mu = 4
 sigma = 1/np.sqrt(2)
 momentum = 0
 
@@ -72,14 +72,15 @@ psi = np.exp(-(grid.x - mu)**2 / (2 * sigma**2)) * np.exp(1j * momentum * grid.x
 psi *= grid.fftshift_correction
 psi /= np.linalg.norm(psi)
 
-fig, axes = plt.subplots(1, 1, squeeze=False, figsize=(15, 8))
-for ax, t in zip(axes.flat, [0.48]):
+fig, axes = plt.subplots(3, 3, squeeze=False, figsize=(15, 8))
+for ax, t in zip(axes.flat, [t*0.48 for t in range(9)]):
+    ax.set_ylim(top=max(abs(psi)**2)*1.05)
     # These two variables are used to plot the ideal curve from the analytical solution (if desired).
     num_pts = 500
     x_fine = np.linspace(-grid.d, grid.d, num_pts, endpoint=False)
 
-    potential = "no"
-    num_steps = 12
+    potential = "qho"
+    num_steps = 128
     dt = t/num_steps
 
     match potential:
