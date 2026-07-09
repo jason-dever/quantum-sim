@@ -23,6 +23,16 @@ this is only slightly different from Schrödinger. If we can store the spinor $\
 nearly all the same methods can be used to solve Dirac; we will use Strang splitting
 to approximate the solution by solving each term individually. Note that $\propto$ can
 usually be interpreted as "equal up to normalization."
+\section*{Splitting}
+Like in Schrödinger, we approximate the solution using splitting of the unitary transformation,
+but this time we use the Strang splitting:
+\begin{align*}
+    \psi(x, t_{j+1}) = e^{-\partial_x \sigma_x \frac{\Delta t}{2}} e^{-i(m\sigma_z + f(x))\Delta t} e^{-\partial_x \sigma_x \frac{\Delta t}{2}} \psi(x, t_j) + O(\Delta t^3)
+\end{align*}
+With $\frac{t}{\Delta t}$ timesteps, this gives a second order in $\Delta t$ accumulated error 
+$O(\frac{t}{\Delta t}\Delta t^3) = O(t \Delta t^2)$. Also recognize that $[m \sigma_z, f(x)I] = 0$,
+so we can split exactly $e^{-i(m \sigma_z + f(x)) \Delta t} = e^{-im \sigma_z} e^{-if(x)}$. The
+implementation of these operators and storage of the spinor on qubits are detailed below.
 \section*{Discretization and Storage}
 Fortunately, the problem of storing the spinor on qubits has a simple solution: we
 maintain a register to store position, as in Schrödinger, and add one qubit as
