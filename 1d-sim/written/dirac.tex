@@ -36,7 +36,7 @@ as we know how from Schrödinger, and store the state $\psi$ as
 With the indicator as the most significant qubit, this is equivalent to concatenating the
 column vectors of amplitudes for $\ket{\psi_1}$ and $\ket{\psi_2}$. Regarding measurement
 probabilities, if we measure only the register storing position, and leave the indicator
-qubit unmeasured, the probability of measuring $\ket{k}$ is $p(k) \propto |\psi_1(x_k, t)|^2 + |\psi_2(x_k), t|^2$.
+qubit unmeasured, the probability of measuring $\ket{k}$ is $p(k) \propto |\psi_1(x_k, t)|^2 + |\psi_2(x_k, t)|^2$.
 This is justified as follows: the state $\ket{\psi}$ has density matrix
 \begin{align*}
     \ket{\psi}\bra{\psi} &\propto (\ket{0} \otimes \ket{\psi_1} + \ket{1} \otimes \ket{\psi_2})(\bra{0} \otimes \bra{\psi_1} + \bra{1}\otimes \bra{\psi_2}) \\
@@ -67,12 +67,12 @@ we solve using the Fourier transform $\mathcal{F}$ to get
 \begin{align*}
     \varphi(x, t) =
     \begin{bmatrix}
-        \mathcal{F}^{-1}(e^{i \xi t}\mathcal{F}(\varphi_1^0)(\xi)) \\
-        \mathcal{F}^{-1}(e^{-i \xi t}\mathcal{F}(\varphi_2^0)(\xi)) \\
+        \mathcal{F}^{-1}(e^{-i \xi t}\mathcal{F}(\varphi_1^0)(\xi)) \\
+        \mathcal{F}^{-1}(e^{i \xi t}\mathcal{F}(\varphi_2^0)(\xi)) \\
     \end{bmatrix}
 \end{align*}
 Hence on the quantum computer we map $\ket{s} \otimes \ket{k} \mapsto \ket{s}
-\otimes (QFT e^{(-1)^s i\xi_k \Delta t} QFT^\dag \ket{k})$, where as before, $\xi_k = \frac{\pi}{L}(2k - N)$.
+\otimes (QFT e^{(-1)^{s+1} i\xi_k \Delta t} QFT^\dag \ket{k})$, where as before, $\xi_k = \frac{\pi}{L}(2k - N)$.
 A new concern we have in Dirac is that any $\theta$ dependent global phase incurred in 
 the application of $e^{i\theta k}$ is now a relative phase between $\varphi_1$ and $\varphi_2$
 that we need to correct for. We write the phase shift operation more carefully 
@@ -80,21 +80,21 @@ with respect to global phase changes. Note that I've changed the implementation
 of $e^{ik} := \bigotimes_{j=0}^{n-1} P(2^j)$ to use phase gates, rather than differences of identity and $Z$ gates.
 This makes global phase easier to keep track of.
 \begin{align*}
-    \exp{(-1)^s \frac{\pi}{L}(2k-N)\Delta t} &= \exp\left((-1)^{s+1} i N \frac{\pi}{L}\Delta t\right)\exp\left((-1)^s 2i \frac{\pi}{L} \Delta t k\right) \\
-    &= \exp\left((-1)^{s+1} i N \frac{\pi}{L}\Delta t\right)\bigotimes_{j=0}^{n-1} P\left((-1)^s2^{j+1}\frac{\pi}{L} \Delta t \right)
+    \exp\left((-1)^{s+1} i\frac{\pi}{L}(2k-N)\Delta t\right) &= \exp\left((-1)^{s} i N \frac{\pi}{L}\Delta t\right)\exp\left((-1)^{s+1} 2i \frac{\pi}{L} \Delta t k\right) \\
+    &= \exp\left((-1)^{s} i N \frac{\pi}{L}\Delta t\right)\bigotimes_{j=0}^{n-1} P\left((-1)^{s+1}2^{j+1}\frac{\pi}{L} \Delta t \right)
 \end{align*}
-This gives us a relative phase difference of $e^{\frac{2\pi i N \Delta t}{L}}$ between
-$\varphi_1$ and $\varphi_2$, which we compensate for by applying $P\left(\frac{-2\pi N \Delta t}{L}\right)$
-to the spinor qubit. The quantum circuit we implement to apply the shift phase is below.
-$\theta = \frac{\pi}{L} \Delta t$.
+$\varphi_1$ picks up a phase of $e^{\frac{\pi i N \Delta t}{L}}$, and $\varphi_2$ picks
+up a phase of $e^{-\frac{\pi i N \Delta t}{L}}$, which we build in by applying 
+$R_Z\left(\frac{-2\pi N \Delta t}{L}\right)$ to the spinor qubit. The quantum 
+circuit we implement to apply the shift phase is below. $\theta = \frac{\pi}{L} \Delta t$.
 \begin{center}
 \makebox[\textwidth][c]{%
 \begin{quantikz}[wire types={q,q,n,q,q}, row sep={0.9cm,between origins}]
-    \lstick{$\ket{k_0}$} & \gate{P(-\theta)} &&&&&& \gate{P(\theta)}&&&  \\
-    \lstick{$\ket{k_1}$} && \gate{P(-2\theta)} &&&& \gate{P(2\theta)} &&&&       \\
+    \lstick{$\ket{k_0}$} & \gate{P(2\theta)} &&&&&& \gate{P(-2\theta)}&&&  \\
+    \lstick{$\ket{k_1}$} && \gate{P(4\theta)} &&&& \gate{P(-4\theta)} &&&&       \\
     \lstick{$\vdots$}    &&&&&&&&&   &\\ 
-    \lstick{$\ket{k_{N-1}}$} &&& \gate{P(-2^{N-1}\theta)} &  & \gate{P(2^{N-1}\theta)} &&&& & \\
-    \lstick{$\ket{s}$}   & \ctrl{-4}  & \ctrl{-3}  & \ctrl{-1}  & \gate{X} & \ctrl{-1}  & \ctrl{-3}  & \ctrl{-4}  &  \gate{X} & \gate{e^{-2 N \theta}} &
+    \lstick{$\ket{k_{n-1}}$} &&& \gate{P(2^{n}\theta)} &  & \gate{P(-2^{n}\theta)} &&&& & \\
+    \lstick{$\ket{s}$}   & \ctrl{-4}  & \ctrl{-3}  & \ctrl{-1}  & \gate{X} & \ctrl{-1}  & \ctrl{-3}  & \ctrl{-4}  &  \gate{X} & \gate{R_Z(-2 N \theta)} &
 \end{quantikz}%
 }
 \end{center}
@@ -107,15 +107,15 @@ solution with two Gaussians $\varphi_1$ and $\varphi_2$.
 As interesting as this is, our concern is with Dirac, and still we need to be able
 to map between $\ket{\psi}$ and $\ket{\varphi}$. This is fortunately very simple and
 reveals itself after a bit of algebra. Recalling that $\psi = H\varphi$ and $\varphi = H \psi$,
-and we have the state $\ket{\varphi} = \ket{s}\ket{\text{pos}} \propto \ket{0}\ket{\varphi_1} + \ket{1}{\ket{\varphi_2}}$
+and we have the state $\ket{\varphi} \propto \ket{0}\ket{\varphi_1} + \ket{1}{\ket{\varphi_2}}$
 \begin{align*}
     \ket{\psi} &\propto \ket{0}\ket{\psi_1} + \ket{1} \ket{\psi_2} \\
                &= \frac{\ket{0}}{\sqrt{2}}\left(\ket{\varphi_1} + \ket{\varphi_2}\right) + \frac{\ket{1}}{\sqrt{2}}\left(\ket{\varphi_1} - \ket{\varphi_2}\right) \\
                &= \frac{\ket{0} + \ket{1}}{\sqrt{2}}\ket{\varphi_1} + \frac{\ket{0} - \ket{1}}{\sqrt{2}}\ket{\varphi_2} \\
-               &= H\ket{s}\ket{\text{pos}}
+               &= (H \otimes I)\ket{\varphi}
 \end{align*}
-By a symmetric argument, we can transform between $\ket{\varphi}$ and $\ket{\psi}$
+The same gate maps both directions, so we can transform between $\ket{\varphi}$ and $\ket{\psi}$
 with a Hadamard gate on the spinor qubit. Thus our solution to $\partial_t \psi = -\sigma_x \partial_x \psi$
-is given by simply applying $H$ to $\ket{s}$, following the work above for the linear transport,
-then applying another $H$ to $\ket{s}$. This is the circuit returned by transport().
+is given by simply applying $H$ to the spinor qubit, following the work above for the linear transport,
+then applying another $H$. This is the circuit returned by transport().
 \end{document}
