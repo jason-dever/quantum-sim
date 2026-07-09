@@ -18,7 +18,8 @@ We hope to solve the equation
 where $\psi = (\psi_1 \psi_2)^T$, and $f$ is some potential function. In theory,
 this is only slightly different from Schrödinger. If we can store the spinor $\psi$,
 nearly all the same methods can be used to solve Dirac; we will use Strang splitting
-to approximate the solution by solving each term individually.
+to approximate the solution by solving each term individually. Note that $\propto$ can
+usually be interpreted as "equal up to normalization."
 \section*{Discretization and Storage}
 Fortunately, the problem of storing the spinor on qubits has a simple solution: we
 maintain a register to store position, as in Schrödinger, and add one qubit as
@@ -30,8 +31,47 @@ as we know how from Schrödinger, and store the state $\psi$ as
                &\propto \ket{0} \otimes \ket{\psi_1} + \ket{1} \otimes \ket{\psi_2}
 \end{align*}
 With the indicator as the most significant qubit, this is equivalent to concatenating the
-column vectors of amplitudes for $\ket{\psi_1}$ and $\ket{\psi_2}$. 
+column vectors of amplitudes for $\ket{\psi_1}$ and $\ket{\psi_2}$. Regarding measurement
+probabilities, if we measure only the register storing position, and leave the indicator
+qubit unmeasured, the probability of measuring $\ket{k}$ is $p(k) \propto |\psi_1(x_k, t)|^2 + |\psi_2(x_k), t|^2$.
+This is justified as follows: the state $\ket{\psi}$ has density matrix
+\begin{align*}
+    \ket{\psi}\bra{\psi} &\propto (\ket{0} \otimes \ket{\psi_1} + \ket{1} \otimes \ket{\psi_2})(\bra{0} \otimes \bra{\psi_1} + \bra{1}\otimes \bra{\psi_2}) \\
+    &= \ket{0}\bra{0} \otimes \ket{\psi_1} \bra{\psi_1} + \ket{0}\bra{1} \otimes \ket{\psi_1} \bra{\psi_2} + \ket{1}\bra{0} \otimes \ket{\psi_2} \bra{\psi_1} + \ket{1}\bra{1} \otimes \ket{\psi_2} \bra{\psi_2}
+\end{align*}
+Measurement probabilities of the position register are given by the reduced density
+matrix obtained by tracing out the spinor qubit. Taking the partial trace, we get
+\begin{align*}
+    \mathcal{\rho} &\propto \ket{\psi_1}\bra{\psi_1} + \ket{\psi_2} \bra{\psi_2} \\
+                   &= \sum_{l=0}^{N-1}\sum_{j=0}^{N-1}(\psi_1(x_l)\psi_1(x_j)^* + \psi_2(x_l)\psi_2(x_j)^*) \ket{l} \bra{j}
+\end{align*}
+Thus the probability of measuring $\ket{k}$ at time $t$ is $p(k) = \text{tr}(\ket{k}\bra{k}\rho) 
+\propto |\psi_1(x_k, t)|^2 + |\psi_2(x_k, t)|^2$ by orthonormality of the computational basis.
 \section*{Transport Term}
-
-
+We concern ourselves with the equation $i \partial_t \psi = -i \partial_x \sigma_x \psi$.
+Recognizing that $\sigma_x = H \sigma_z H$, where, $H$ is the Hadamard matrix, this
+system is equivalent to $\partial_t H \psi = -\partial_x \sigma_z H \psi$. Letting
+$\varphi := (\varphi_1, \varphi_2)^T = H \psi$, since $\sigma_z$ is diagonal, the system 
+is decoupled: $\partial_t \varphi = -\partial_x \sigma_z \varphi$. Equivalently,
+\begin{align*}
+    &\partial_t \varphi_1 = -\partial_x \varphi_1 \\
+    &\partial_t \varphi_2 = \partial_x \varphi_2
+\end{align*}
+This is a first order linear transport equation, which has a known solution
+for initial conditions $\varphi_j^0(x) = \varphi_j(x, 0)$: $\varphi_1(x, t) = \varphi_1^0(x-t)$
+and $\varphi_2(x, t) = \varphi_2^0(x+t)$. For the sake of implementation on a quantum computer,
+we solve using the Fourier transform $\mathcal{F}$ to get
+\begin{align*}
+    \varphi(x, t) =
+    \begin{bmatrix}
+        \mathcal{F}^{-1}(e^{i \xi t}\mathcal{F}(\varphi_1^0)(\xi)) \\
+        \mathcal{F}^{-1}(e^{-i \xi t}\mathcal{F}(\varphi_2^0)(\xi)) \\
+    \end{bmatrix}
+\end{align*}
+Hence on the quantum computer we map $\ket{s} \otimes \ket{k} \mapsto \ket{s}
+\otimes (QFT e^{(-1)^s i\xi_k \Delta t} QFT^\dag \ket{k})$, where as before, $\xi_k = \frac{\pi}{L}(2k - N)$.
+A new concern we have in Dirac is that any $\theta$ dependent global phase incurred in 
+the application of $e^{i\theta k}$ is now a relative phase between $\varphi_1$ and $\varphi_2$
+that we need to correct for. We re-derive the above operation more carefully 
+with respect to global phase changes.
 \end{document}
