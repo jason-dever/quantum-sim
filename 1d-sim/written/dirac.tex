@@ -118,4 +118,17 @@ The same gate maps both directions, so we can transform between $\ket{\varphi}$ 
 with a Hadamard gate on the spinor qubit. Thus our solution to $\partial_t \psi = -\sigma_x \partial_x \psi$
 is given by simply applying $H$ to the spinor qubit, following the work above for the linear transport,
 then applying another $H$. This is the circuit returned by transport().
+\section*{Mass Term}
+We now concern ourselves with the mass term $i \partial_t \psi = m \sigma_z \psi$.
+Fortunately, $\sigma_z$ is diagonal in the standard basis, so we have the following solution.
+\begin{align*}
+    \psi(x, t) = 
+    \begin{bmatrix}
+        e^{-imt}\psi_1^0(x) \\
+        e^{imt}\psi_2^0(x)
+    \end{bmatrix}
+\end{align*}
+On qubits we want to map $\ket{0}\ket{\psi_1} + \ket{1}\ket{\psi_2} \mapsto e^{-im \Delta t}
+\ket{0} \ket{\psi_1} + e^{im \Delta t}\ket{1}\ket{\psi_2}$. This is implemented with
+a single $R_Z(2m \Delta t)$ on the spinor qubit.
 \end{document}
