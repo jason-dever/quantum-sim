@@ -45,6 +45,17 @@ def get_one_iter(grid: Grid, potential_qc: QuantumCircuit, dt) -> QuantumCircuit
 
     return qc
 
+def get_sim_circuit(grid: Grid, get_one_iter: Callable[[Grid, QuantumCircuit, float], QuantumCircuit], potential: QuantumCircuit, dt, final_t) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor=0)
+    num_iter = 0 if final_t == 0 else floor(final_t/dt)
+
+    # Using operator splitting to approximately solve the equation, we take 
+    # timesteps of length dt from t=0 to the last step before/at final_t.
+    for _ in range(num_iter):
+        qc.compose(get_one_iter(grid, potential, dt), inplace=True)
+
+    return qc
+
 # The analytical solutions don't need normalization here
 # because we have to normalize again before we plot anyway.
 
