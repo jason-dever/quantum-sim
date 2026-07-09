@@ -104,6 +104,18 @@ solution with two Gaussians $\varphi_1$ and $\varphi_2$.
 \begin{center}
 \includegraphics[scale=0.4]{../plots/transport.png}
 \end{center}
-
-\section*{Test}
+As interesting as this is, our concern is with Dirac, and still we need to be able
+to map between $\ket{\psi}$ and $\ket{\varphi}$. This is fortunately very simple and
+reveals itself after a bit of algebra. Recalling that $\psi = H\varphi$ and $\varphi = H \psi$,
+and we have the state $\ket{\varphi} = \ket{s}\ket{\text{pos}} \propto \ket{0}\ket{\varphi_1} + \ket{1}{\ket{\varphi_2}}$
+\begin{align*}
+    \ket{\psi} &\propto \ket{0}\ket{\psi_1} + \ket{1} \ket{\psi_2} \\
+               &= \frac{\ket{0}}{\sqrt{2}}\left(\ket{\varphi_1} + \ket{\varphi_2}\right) + \frac{\ket{1}}{\sqrt{2}}\left(\ket{\varphi_1} - \ket{\varphi_2}\right) \\
+               &= \frac{\ket{0} + \ket{1}}{\sqrt{2}}\ket{\varphi_1} + \frac{\ket{0} - \ket{1}}{\sqrt{2}}\ket{\varphi_2} \\
+               &= H\ket{s}\ket{\text{pos}}
+\end{align*}
+By a symmetric argument, we can transform between $\ket{\varphi}$ and $\ket{\psi}$
+with a Hadamard gate on the spinor qubit. Thus our solution to $\partial_t \psi = -\sigma_x \partial_x \psi$
+is given by simply applying $H$ to $\ket{s}$, following the work above for the linear transport,
+then applying another $H$ to $\ket{s}$. This is the circuit returned by transport().
 \end{document}
