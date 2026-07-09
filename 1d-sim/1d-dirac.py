@@ -21,7 +21,7 @@ def transport(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
         qc.cp(-phase * 2**(j+1), indicator_idx, j)
     qc.x(indicator_idx)
 
-    qc.p(-2*phase*grid.N, indicator_idx)
+    qc.rz(-2*phase*grid.N, indicator_idx)
 
     qc.compose(QFTGate(grid.num_qubits), pos_reg, inplace=True)
 
