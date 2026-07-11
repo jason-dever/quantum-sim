@@ -76,10 +76,10 @@ and $\varphi_2(x, t) = \varphi_2^0(x+t)$. For the sake of implementation on a qu
 we solve using the Fourier transform $\mathcal{F}$ to get
 \begin{align*}
     \varphi(x, t) =
-    \begin{bmatrix}
+    \begin{pmatrix}
         \mathcal{F}^{-1}(e^{-i \xi t}\mathcal{F}(\varphi_1^0)(\xi)) \\
         \mathcal{F}^{-1}(e^{i \xi t}\mathcal{F}(\varphi_2^0)(\xi)) \\
-    \end{bmatrix}
+    \end{pmatrix}
 \end{align*}
 Hence on the quantum computer we map $\ket{s} \otimes \ket{k} \mapsto \ket{s}
 \otimes (QFT e^{(-1)^{s+1} i\xi_k \Delta t} QFT^\dag \ket{k})$, where as before, $\xi_k = \frac{\pi}{L}(2k - N)$.
@@ -133,12 +133,48 @@ We now concern ourselves with the mass term $i \partial_t \psi = m \sigma_z \psi
 Fortunately, $\sigma_z$ is diagonal in the standard basis, so we have the following solution.
 \begin{align*}
     \psi(x, t) = 
-    \begin{bmatrix}
+    \begin{pmatrix}
         e^{-imt}\psi_1^0(x) \\
         e^{imt}\psi_2^0(x)
-    \end{bmatrix}
+    \end{pmatrix}
 \end{align*}
 On qubits we want to map $\ket{0}\ket{\psi_1} + \ket{1}\ket{\psi_2} \mapsto e^{-im \Delta t}
 \ket{0} \ket{\psi_1} + e^{im \Delta t}\ket{1}\ket{\psi_2}$. This is implemented with
 a single $R_Z(2m \Delta t)$ on the spinor qubit.
+\section*{Testing}
+Here I justify a test of the transport term. By our previous work,
+we know $\psi = H \varphi$, thus the initial condition $\varphi^0$ is given by 
+\begin{align*}
+    \varphi^0 = H \psi^0 = 
+    \frac{1}{\sqrt{2}}
+    \begin{pmatrix}
+        \psi_1^0 + \psi_2^0 \\
+        \psi_1^0 - \psi_2^0
+    \end{pmatrix}
+\end{align*}
+Solving now for $\psi$,
+\begin{align*}
+    \psi(x, t) &= H \varphi(x, t) \\
+    &= \frac{1}{\sqrt{2}}
+    \begin{pmatrix}
+        \varphi_1(x, t) + \varphi_2(x, t) \\
+        \varphi_1(x, t) - \varphi_2(x, t)
+    \end{pmatrix} \\
+    &= \frac{1}{\sqrt{2}}
+    \begin{pmatrix}
+        \varphi_1^0(x - t) + \varphi_2^0(x + t) \\
+        \varphi_1^0(x - t) + \varphi_2^0(x + t) \\
+    \end{pmatrix} \\
+    &= \frac{1}{2}
+    \begin{pmatrix}
+        \psi_1^0(x-t) + \psi_2^0(x-t) + \psi_1^0(x+t) - \psi_2^0(x+t) \\
+        \psi_1^0(x-t) + \psi_2^0(x-t) - \psi_1^0(x+t) + \psi_2^0(x+t) \\
+    \end{pmatrix}
+\end{align*}
+Thus from any initial condition $\psi^0$, we can construct exact solutions according
+to the scheme above and discretize on qubits as $\ket{\psi_\text{ideal}}$. If our
+true $\ket{\psi}$ is successfully computed up to a global phase, we should have
+$|\braket{\psi|\psi_{\text{ideal}}}| = 1$. Defining the error $\varepsilon :=
+\left|1 - |\braket{\psi|\psi_{\text{ideal}}}|\right|$, we can say the test passes if $\varepsilon$
+is smaller than some predefined tolerance.
 \end{document}
