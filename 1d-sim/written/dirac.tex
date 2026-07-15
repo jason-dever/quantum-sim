@@ -176,5 +176,15 @@ to the scheme above and discretize on qubits as $\ket{\psi_\text{ideal}}$. If ou
 true $\ket{\psi}$ is successfully computed up to a global phase, we should have
 $|\braket{\psi|\psi_{\text{ideal}}}| = 1$. Defining the error $\varepsilon :=
 \left|1 - |\braket{\psi|\psi_{\text{ideal}}}|\right|$, we can say the test passes if $\varepsilon$
-is smaller than some predefined tolerance.
+is smaller than some predefined tolerance. Testing the mass term is much easier;
+since the system is already uncoupled, we can solve
+\begin{align*}
+    i \partial_t \psi = m \sigma_z \psi \implies \psi(x, t) =
+    \begin{pmatrix}
+        e^{-im t} \psi_1^0(x) \\
+        e^{imt} \psi_2^0(x)
+    \end{pmatrix}
+\end{align*}
+and test by the same procedure.
+
 \end{document}
