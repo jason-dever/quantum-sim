@@ -36,16 +36,31 @@ def mass(grid: Grid, dt, m, num_spinor=1) -> QuantumCircuit:
     qc.rz(2*m*dt, indicator_idx)
     return qc
 
+def linear_potential(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor)
+
+    for j in range(grid.num_qubits):
+        qc.p(-2**j * grid.dx * dt, j)
+
+    return qc
+
+def qho_potential(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor)
+
+    for j in range(grid.num_qubits):
+        qc.p(2**j * grid.dx * dt *(2*grid.d - 2**j * grid.dx), j)
+        for l in range(j+1, grid.num_qubits):
+            qc.cp(-2**(j+l+1) * grid.dx**2 * dt, j, l)
+
+    return qc
+
 def get_one_iter(grid: Grid, dt, m, potential, num_spinor=1) -> QuantumCircuit:
     qc = get_empty_sim(grid, num_spinor)
 
-    # qc.compose(transport(grid, dt/2, num_spinor), inplace=True)
-    # qc.compose(mass(grid, dt, m, num_spinor), inplace=True)
-    # qc.compose(potential(grid, dt, num_spinor), inplace=True)
-    # qc.compose(transport(grid, dt/2, num_spinor), inplace=True)
-    qc.compose(mass(grid, dt/2, m, num_spinor), inplace=True)
-    qc.compose(transport(grid, dt, num_spinor), inplace=True)
-    qc.compose(mass(grid, dt/2, m, num_spinor), inplace=True)
+    qc.compose(transport(grid, dt/2, num_spinor), inplace=True)
+    qc.compose(mass(grid, dt, m, num_spinor), inplace=True)
+    qc.compose(potential(grid, dt, num_spinor), inplace=True)
+    qc.compose(transport(grid, dt/2, num_spinor), inplace=True)
 
     return qc
 
@@ -65,59 +80,42 @@ def get_sim_circuit(grid: Grid, get_one_iter, dt, final_t, m, potential=lambda g
     return qc
 
 if __name__ == "__main__":
-    grid = Grid(num_qubits=8, d=10*np.pi)
+    grid = Grid(num_qubits=7, d=4*np.pi)
 
-    mu = 0
+    mu = 5
     sigma_1 = 1
     sigma_2 = 1
-    momentum_1 = 2
-    momentum_2 = 2
+    momentum_1 = 0
+    momentum_2 = 0
 
     psi_1 = np.exp(-(grid.x - mu)**2 / (2 * sigma_1**2)) * np.exp(1j * momentum_1 * grid.x)
     psi_1 *= grid.fftshift_correction
-    psi_2 = np.exp(-(grid.x - mu)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * grid.x)
+    # psi_2 = np.exp(-(grid.x - mu)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * grid.x)
+    psi_2 = 0*grid.x
     psi_2 *= grid.fftshift_correction
     psi = np.concatenate((psi_1, psi_2))
     psi /= np.linalg.norm(psi)
 
-    max_y = max(abs(psi_1/np.linalg.norm(psi_1))**2 + abs(psi_2/np.linalg.norm(psi_2))**2)*1.05/2
+    # max_y = max(abs(psi_1/np.linalg.norm(psi_1))**2 + abs(psi_2/np.linalg.norm(psi_2))**2)*1.05/2
     initial_statevector = Statevector(psi)
-    fig, axes = plt.subplots(3, 3, squeeze=False, figsize=(15, 12))
-    for ax, t in zip(axes.flat, [t for t in range(9)]):
+    fig, axes = plt.subplots(2, 3, squeeze=False, figsize=(15, 8))
+    for ax, t in zip(axes.flat, [t for t in range(6)]):
         # ax.set_ylim(top=max_y)
-        # num_pts = 500
-        # x_fine = np.linspace(-grid.d, grid.d, num_pts, endpoint=False)
-        # ideal_curve = abs(np.exp(-(x_fine - mu - t)**2 / (2 * sigma_1**2)))**2 + abs(np.exp(-(x_fine - mu + t)**2 / (2 * sigma_2**2)))**2
-        # ideal_curve /= ideal_curve.sum()
-        # ax.plot(x_fine, ideal_curve*num_pts/grid.N, "r-")
 
-        dt = 1/16
+        dt = 1/8
         num_steps = t/dt
         m=1
 
         dynamics = get_empty_sim(grid, num_spinor=1)
         dynamics.initialize(initial_statevector)
-        dynamics.compose(get_sim_circuit(grid, get_one_iter, dt, t, m), inplace=True)
+        dynamics.compose(get_sim_circuit(grid, get_one_iter, dt, t, m, potential=qho_potential), inplace=True)
 
-        rho = Statevector.from_circuit(dynamics)
-        rho_1 = Statevector(rho.data[:grid.N])
-        rho_2 = Statevector(rho.data[grid.N:])
         probs = exact_sim(grid, psi, dynamics, num_spinor=1)
 
         ax.bar(grid.x, probs, width=0.7*grid.dx)
-        print(np.linalg.norm(rho_1.data - rho_2.data.conj()))
         ax.set_xlabel("position")
         ax.set_ylabel("probability")
         ax.set_title(f"t={t}")
-
-        # psi_1_ideal = np.exp(-(grid.x - mu - t)**2 / (2 * sigma_1**2)) * np.exp(1j * momentum_1 * (grid.x-t))
-        # psi_1_ideal *= grid.fftshift_correction
-        # psi_2_ideal = np.exp(-(grid.x - mu + t)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * (grid.x+t))
-        # psi_2_ideal *= grid.fftshift_correction
-        # psi_ideal = np.concatenate((psi_1_ideal, psi_2_ideal))
-        # psi_ideal /= np.linalg.norm(psi_ideal)
-        # psi_ideal = Statevector(psi_ideal)
-        # print(abs(Statevector.from_circuit(dynamics).inner(Statevector(psi_ideal)))**2)
 
     plt.tight_layout()
     plt.show()
