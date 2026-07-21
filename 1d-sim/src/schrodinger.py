@@ -60,7 +60,7 @@ def get_sim_circuit(grid: Grid, get_one_iter: Callable[[Grid, QuantumCircuit, fl
 # because we have to normalize again before we plot anyway.
 
 def analytical_solution_free(momentum, x, t):
-    # For intial sigma = 1/np.sqrt(2), mu = 0
+    # For intial sigma = 1/np.sqrt(2)
     return abs(np.sqrt(1j/(-4*t+1j))*np.exp((-1j*x**2 - momentum*x + momentum**2 * t)/(-4*t+1j)))**2
 
 
@@ -75,7 +75,7 @@ grid = Grid(num_qubits=6, d=2*np.pi)
 # The curve of measurement probabilities, ie abs(psi)**2, will be a Gaussian with
 # mean mu and standard deviation sigma/sqrt(2).
 
-mu = 4
+mu = 2
 sigma = 1/np.sqrt(2)
 momentum = 0
 
@@ -84,13 +84,13 @@ psi *= grid.fftshift_correction
 psi /= np.linalg.norm(psi)
 
 fig, axes = plt.subplots(3, 3, squeeze=False, figsize=(15, 8))
-for ax, t in zip(axes.flat, [t*0.48 for t in range(9)]):
+for ax, t in zip(axes.flat, [t*0.1 for t in range(9)]):
     ax.set_ylim(top=max(abs(psi)**2)*1.05)
     # These two variables are used to plot the ideal curve from the analytical solution (if desired).
     num_pts = 500
     x_fine = np.linspace(-grid.d, grid.d, num_pts, endpoint=False)
 
-    potential = "qho"
+    potential = "no"
     num_steps = 128
     dt = t/num_steps
 
@@ -100,7 +100,7 @@ for ax, t in zip(axes.flat, [t*0.48 for t in range(9)]):
             ideal_curve = analytical_solution_qho(mu, sigma, x_fine, t)
         case "no": # Free particle
             potential_qc = QuantumCircuit(grid.num_qubits)
-            ideal_curve = analytical_solution_free(momentum, x_fine, t)
+            ideal_curve = analytical_solution_free(momentum, x_fine-mu, t)
             dt = t # No need for splitting in this case: we can compute for exact t
         case _:
             print("what?")
