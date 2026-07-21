@@ -18,7 +18,7 @@ We hope to solve the equation
 \begin{align*} 
     i \partial_t \psi = (-i \sigma_x \partial_x + m \sigma_z + f(x))\psi
 \end{align*}
-where $\psi = (\psi_1 \psi_2)^T$, and $f$ is some potential function. In theory,
+where $\psi = (\psi_1, \psi_2)^T$, and $f$ is some potential function. In theory,
 this is only slightly different from Schrödinger. If we can store the spinor $\psi$,
 nearly all the same methods can be used to solve Dirac; we will use Strang splitting
 to approximate the solution by solving each term individually. Note that $\propto$ can
@@ -31,7 +31,7 @@ but this time we use the Strang splitting:
 \end{align*}
 With $\frac{t}{\Delta t}$ timesteps, this gives a second order in $\Delta t$ accumulated error 
 $O(\frac{t}{\Delta t}\Delta t^3) = O(t \Delta t^2)$. Also recognize that $[m \sigma_z, f(x)I] = 0$,
-so we can split exactly $e^{-i(m \sigma_z + f(x)) \Delta t} = e^{-im \sigma_z} e^{-if(x)}$. The
+so we can split exactly $e^{-i(m \sigma_z + f(x)) \Delta t} = e^{-im \sigma_z \Delta t} e^{-if(x) \Delta t}$. The
 implementation of these operators and storage of the spinor on qubits are detailed below.
 \section*{Discretization and Storage}
 Fortunately, the problem of storing the spinor on qubits has a simple solution: we
@@ -62,7 +62,7 @@ Thus the probability of measuring $\ket{k}$ at time $t$ is $p(k) = \text{tr}(\ke
 \propto |\psi_1(x_k, t)|^2 + |\psi_2(x_k, t)|^2$ by orthonormality of the computational basis.
 \section*{Transport Term}
 We concern ourselves with the equation $i \partial_t \psi = -i \partial_x \sigma_x \psi$.
-Recognizing that $\sigma_x = H \sigma_z H$, where, $H$ is the Hadamard matrix, this
+Recognizing that $\sigma_x = H \sigma_z H$, where $H$ is the Hadamard matrix, this
 system is equivalent to $\partial_t H \psi = -\partial_x \sigma_z H \psi$. Letting
 $\varphi := (\varphi_1, \varphi_2)^T = H \psi$, since $\sigma_z$ is diagonal, the system 
 is decoupled: $\partial_t \varphi = -\partial_x \sigma_z \varphi$. Equivalently,
@@ -180,8 +180,8 @@ The first term in the product is linear in $k$, so we know already by previous w
 how to decompose such a thing into phase gates. Considering the $e^{-ik^2}$ term, we have
 \begin{align*}
     e^{-ik^2} &= e^{-i\left( \sum_{j=0}^{n-1} 2^j k_j \right) \left( \sum_{l=0}^{n-1} 2^l k_l \right)} \\
-    &= e^{\sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} k_j k_l} \\
-    &= e^{\sum_{j=0}^{n=1} 2^{2j}k_j} e^{\sum_{j=0}^{n-1}\sum_{l=0}^{n-1}2^{j+l+1}k_j k_l}
+    &= e^{-i \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} k_j k_l} \\
+    &= e^{\sum_{j=0}^{n-1} -i2^{2j}k_j} e^{\sum_{j=0}^{n-1}\sum_{l=j+1}^{n-1}-i2^{j+l+1}k_j k_l}
 \end{align*}
 This can be decomposed into phase gates as follows.
 \begin{align*}
@@ -189,7 +189,7 @@ This can be decomposed into phase gates as follows.
 \end{align*}
 Finally deriving our quantum circuit for $f(x) = x^2$, we have
 \begin{align*}
-    e^{-if(x_k)\Delta t} &= \prod_{j=0}^{n-1} P_j(2^{j+1}d \Delta x \Delta t)P(-2^{2j}\Delta x^2 \Delta t)
+    e^{-if(x_k)\Delta t} &= \prod_{j=0}^{n-1} P_j(2^{j+1}d \Delta x \Delta t)P_j(-2^{2j}\Delta x^2 \Delta t)
     \prod_{l=j+1}^{n-1} CP_{jl}(-2^{j+l+1}\Delta x^2 \Delta t) \\
     &= \prod_{j=0}^{n-1} P_j(2^j \Delta x \Delta t(2d - 2^j \Delta x)) \prod_{l=j+1}^{n-1}CP_{jl}(-2^{j+l+1}\Delta x^2 \Delta t)
 \end{align*}
@@ -215,7 +215,7 @@ Solving now for $\psi$,
     &= \frac{1}{\sqrt{2}}
     \begin{pmatrix}
         \varphi_1^0(x - t) + \varphi_2^0(x + t) \\
-        \varphi_1^0(x - t) + \varphi_2^0(x + t) \\
+        \varphi_1^0(x - t) - \varphi_2^0(x + t) \\
     \end{pmatrix} \\
     &= \frac{1}{2}
     \begin{pmatrix}

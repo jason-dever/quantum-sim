@@ -15,8 +15,8 @@ To store an arbitrary 1d state on qubits we do two things: we first restrict the
 considering it on an interval $[-d, d]$ for $d > 0$, and we also discretize the
 interval at steps $\Delta x > 0$. Now our state, rather than being of the form
 $\ket{\psi(t)} = \int_{\mathbb{R}} \psi(x, t) \ket{x} dx$, is a normalized
-Riemann sum $\ket{\hat{\psi}(t)} = \sum_{k = -\frac{d}{\Delta x}}^{\frac{d}{\Delta x}} a_k \ket{k \Delta x}$
-($a_k \in \mathbb{C}$). We let $N = \frac{2d}{\Delta x}+1$ denote the number of grid positions.
+Riemann sum $\ket{\hat{\psi}(t)} = \sum_{k = -\frac{d}{\Delta x}}^{\frac{d-1}{\Delta x}} a_k \ket{k \Delta x}$
+($a_k \in \mathbb{C}$). We let $N = \frac{2d}{\Delta x}$ denote the number of grid positions.
 This can be stored on $n = \lceil \log_2\left(N\right) \rceil = O\left(\log \left(\frac{d}{\Delta x} 
 \right) \right)$ qubits with the computational basis state $\ket{k}$ representing
 the position $-d + k \Delta x$, where $k$ is interpreted as an unsigned integer.
@@ -25,12 +25,12 @@ In general, we are trying to solve $i \partial_t \psi = H \psi$, where
 $H = -\partial_x^2 + V(x)$. In the zero potential case, this simplifies to the PDE
 $i \partial_t \psi(x, t) = -\partial_x^2 \psi(x, t)$. Applying the Fourier transform
 $\mathcal{F}$ in x to both sides, we get $i \partial_t \mathcal{F}(\psi)(\xi, t) = \xi^2 \mathcal{F}(\psi)(\xi, t)$.
-This gives the solution in Fourier space $\mathcal{F}(\psi)(\xi, t) = e^{-i \xi^2}\mathcal{F}(\psi)(\xi, 0)$.
-Applying the inverse Fourier transform, we have $\psi(x, t) = \mathcal{F}^{-1}\left(e^{-i \xi^2} \mathcal{F}(\psi)(\xi, 0)\right)$.
+This gives the solution in Fourier space $\mathcal{F}(\psi)(\xi, t) = e^{-i t \xi^2}\mathcal{F}(\psi)(\xi, 0)$.
+Applying the inverse Fourier transform, we have $\psi(x, t) = \mathcal{F}^{-1}\left(e^{-i t \xi^2} \mathcal{F}(\psi)(\xi, 0)\right)$.
 For the discretization on qubits, we use the quantum Fourier transform, mapping
 $\ket{k} \mapsto QFT e^{-i \xi_k^2 t} QFT^\dag \ket{k}$. Note that we apply
 the inverse quantum Fourier transform first; this is because, due to unfortunate
-choice of convention, $QFT^\dag: \ket{k} \mapsto \frac{1}{\sqrt{N}} \sum_{j=0}^{N-1} e^\frac{-2\pi ijk}{N} \ket{k}$
+choice of convention, $QFT^\dag: \ket{k} \mapsto \frac{1}{\sqrt{N}} \sum_{j=0}^{N-1} e^\frac{-2\pi ijk}{N} \ket{j}$
 is the appropriate choice of approximation for $\mathcal{F}(\psi)(\xi, t) = \frac{1}{\sqrt{2\pi}}\int_{\mathbb{R}} e^{-i \xi x} \psi(x, t) dx$.
 The choice of $\xi_k$ is the only decision here I can't really justify, but from \href{https://arxiv.org/pdf/1307.3318}{this paper},
 we take $\Delta \xi = \frac{\pi}{d}$ and $\xi_0 = -\frac{\pi N}{2d}$, hence $\xi_k = -\frac{\pi N}{2d} + k \Delta \xi 
@@ -39,7 +39,7 @@ we take $\Delta \xi = \frac{\pi}{d}$ and $\xi_0 = -\frac{\pi N}{2d}$, hence $\xi
 We consider the quantum circuit implementation of $e^{-i \xi_k^2}$. Note that the
 operator $A$ such that $e^A \ket{k} = e^k \ket{k}$ is given by
 \begin{align*}
-    A &= \sum_{j=0}^{n=1} \frac{I - Z_j}{2}2^j \text{\quad where $Z_j$ is the Pauli $Z$ on the $j$th qubit} \\
+    A &= \sum_{j=0}^{n-1} \frac{I - Z_j}{2}2^j \text{\quad where $Z_j$ is the Pauli $Z$ on the $j$th qubit} \\
       &= \frac{1}{2} \sum_{j=0}^{n-1} 2^j(I - Z_j) \\
       &= \frac{1}{2}\left((2^n-1)I - \sum_{j=0}^{n-1} 2^j Z_j\right)
 \end{align*}
@@ -48,7 +48,7 @@ Now that we have an idea of implementing $e^k$, consider $2k - N = (2^n - 1)I - 
 \begin{align*}
     (2k-N)^2 &= I^2 + 2 \sum_{j=0}^{n-1} 2^j Z_j + \left( \sum_{j=0}^{n-1} 2^j Z_j \right) \left( \sum_{l=0}^{n-1} 2^l Z_l \right) \\
              &= I + \sum_{j=0}^{n-1} 2^{j+1} Z_j + \sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} Z_j Z_l \\
-             &= I + \sum_{j=0}^{n-1} 2^{j+1} Z_j + \sum_{j=0}^{n-1} \sum_{l=j}^{n-1} 2^{j+l+1} Z_j Z_l \text{\quad since $Z_j Z_l = Z_l Z_j$}
+             &\overset{(*)}{=} I + \sum_{j=0}^{n-1} 2^{j+1} Z_j + \sum_{j=0}^{n-1} \sum_{l=j}^{n-1} 2^{j+l+1} Z_j Z_l \text{\quad since $Z_j Z_l = Z_l Z_j$}
 \end{align*}
 Finally we derive the gate decomposition for this operation. Letting $L = 2d$,
 \begin{align*}
@@ -56,12 +56,12 @@ Finally we derive the gate decomposition for this operation. Letting $L = 2d$,
                             &= \exp\left(-i \frac{\pi^2}{L^2} \Delta t\left(I + \sum_{j=0}^{n-1} 2^{j+1} Z_j + \sum_{j=0}^{n-1} \sum_{l=j}^{n-1} 2^{j+l+1} Z_j Z_l\right)\right) \\
                             &\stackrel{(*)}{=} \left(\prod_{j=0}^{n-1} \exp\left( \frac{-i \pi^2 \Delta t}{L^2} 2^{j+1} Z_j \right)\right) \left( \prod_{j=0}^{n-1} \prod_{l=j+1}^{n-1} \exp\left(
                             \frac{-i \pi^2 \Delta t}{L^2} 2^{j+l+1} Z_j Z_l \right)\right) \\
-                            &= \prod_{j=0}^{n-1} R_{Z_j}\left(2^{j+2} \frac{-i \pi^2}{L^2} \Delta t\right) \prod_{j=0}^{n-1} \prod_{l=j+1}^{n-1} R_{jl}\left(2^{j+l+2} \frac{-i \pi^2}{L^2} \Delta t\right) 
+                            &= \prod_{j=0}^{n-1} R_{Z_j}\left(2^{j+2} \frac{\pi^2}{L^2} \Delta t\right) \prod_{j=0}^{n-1} \prod_{l=j+1}^{n-1} R_{jl}\left(2^{j+l+2} \frac{\pi^2}{L^2} \Delta t\right) 
                             \text{\quad by definition}
 \end{align*}
 $(*)$ up to global phase \newline
 $R_z$ and $R_{zz}$ gates are easily accessible on a quantum computer. This is the
-circuit returned by kinetic() of 1d-solver.py.
+circuit returned by kinetic() of schrodinger.py.
 \section*{Quantum Harmonic Oscillator}
 As before, we are trying to solve $i \partial_t \psi = H \psi$, where
 $H = \frac{p^2}{2m} + V$, where $p = -i \hbar \partial_x$ and $V$ is the
