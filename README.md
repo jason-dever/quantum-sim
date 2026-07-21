@@ -6,7 +6,7 @@ Simulation of both 1D equations uses a common set of functions implemented in ``
 In ```approx_sim()```, one can approximate the probability amplitudes of the quantum state after time t
 using either a simulator or a physical IBM QPU (depending on choice of backend) and taking measurements.
 Just note that ```approx_sim()``` requires a configured IBM account and API token if you want to run on quantum hardware.
-Alternatively, with solid performance one can extract the probabilites directly with ```exact_sim()```.
+Alternatively, with solid performance one can extract the probabilities directly with ```exact_sim()```.
 ## 1D Schrödinger Equation
 In ```1d-sim/src/schrodinger.py``` I solve a small set of one-dimensional time-dependent Schrödinger equations
 $i \hbar \partial_t \psi(x, t) = H \psi(x, t)$, where $H = \frac{-\hbar^2}{2m} \partial_x^2 + V(x)$.
@@ -44,9 +44,9 @@ at least with respect to the implementation, to be found there.
 The Schrödinger equation above accurately describes nonrelativistic quantum particles,
 but it does not capture special relativity. To unify these two things, we look to Dirac:
 for a potential function $f$, the 1D Dirac equation is given by $i \hbar \partial_t \psi
-= (-i \hbar \sigma_x \partial_x + mc^2 \sigma_z + f(x))\psi$. Here $\psi = (\psi_1, \psi_2)$ is
+= (-i \hbar c\sigma_x \partial_x + mc^2 \sigma_z + f(x))\psi$. Here $\psi = (\psi_1, \psi_2)$ is
 a Dirac spinor, and $\sigma_x$, $\sigma_z$ refer to the Pauli matrices. Taking $\hbar = c = 1$,
-the equation reduces to $i \partial_t \psi = \sigma_x \partial_x \psi + m \sigma_z \psi + f(x) \psi$.
+the equation reduces to $i \partial_t \psi = -i\sigma_x \partial_x \psi + m \sigma_z \psi + f(x) \psi$.
 As with Schrödinger, all implementation details and methods are written up in a much more detailed 
 LaTeX document and rendered at [1d-sim/written/dirac.pdf](1d-sim/written/dirac.pdf). 
 
@@ -64,12 +64,12 @@ initial state (a Gaussian wavepacket) does not behave in a "nice" manner: the pl
 its shape. In contrast, a Gaussian wavepacket governed by Schrödinger disperses symmetrically and remains
 Gaussian for all time.
 
-Now we modify the initial state slightly, letting $\psi_1 = \psi_2 \propto e^{\frac{-x^2 + ix}{2}}$, giving
+Now we modify the initial state slightly, letting $\psi_1 = \psi_2 \propto e^{-x^2/2 + 2ix}$, giving
 the particle a small positive momentum.
 
 ![free-dirac-p=2](1d-sim/plots/free-dirac-p=2.png)
 
-See that the wavepackets splits into two peaks: a right moving component and a much smaller, left moving
+See that the wavepacket splits into two peaks: a right moving component and a much smaller, left moving
 negative energy component. One could play with the spinor and potential forever and get all kinds of crazy 
 behaviours, but this to me is the most interesting. That being said, perhaps an interesting analysis I haven't
 done would be to plot the (what should be present) Zitterbewegung in the zero momentum case.
