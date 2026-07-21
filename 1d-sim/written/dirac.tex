@@ -141,6 +141,42 @@ Fortunately, $\sigma_z$ is diagonal in the standard basis, so we have the follow
 On qubits we want to map $\ket{0}\ket{\psi_1} + \ket{1}\ket{\psi_2} \mapsto e^{-im \Delta t}
 \ket{0} \ket{\psi_1} + e^{im \Delta t}\ket{1}\ket{\psi_2}$. This is implemented with
 a single $R_Z(2m \Delta t)$ on the spinor qubit.
+\section*{Potentials}
+We implement a linear potential and the quantum harmonic oscillator potential,
+giving a phase gate decomposition here.
+For $f(x) = x$, the Trotter term we implement is
+\begin{align*}
+    \psi(x, t) = e^{-ixt} \psi_0(x)
+\end{align*}
+on qubits, this looks like
+\begin{align*}
+    e^{-if(x)\Delta t}: \ket{k} &\mapsto e^{-ix_k\Delta t} \ket{k} \\
+    &= e^{id\Delta t} e^{-ik\Delta x \Delta t} \ket{k} \\
+    &= \prod_{j=0}^{n-1} e^{-i2^jk_j \Delta x \Delta t} \text{\quad up to global phase}
+\end{align*}
+Hence up to global phase, this potential is given by $\bigotimes_{j=0}^{n-1} P(-2^j \Delta x \Delta t)$
+on the position register. For the quantum harmonic oscillator, we have already
+derived a working circuit using RZ gates, but for completeness here is a derivation
+for the implementation in dirac.py, decomposing the operation with phase gates.
+We want to implement $e^{-i x_k^2 \Delta t} = e^{-i (-d + k \Delta x)^2 \Delta t}$,
+which is given by $e^{2idk\Delta x \Delta t}e^{-ik^2 \Delta x^2 \Delta t}$ up to global phase.
+The first term in the product is linear in $k$, so we know already by previous work
+how to decompose such a thing into phase gates. Considering the $e^{-ik^2}$ term, we have
+\begin{align*}
+    e^{-ik^2} &= e^{-i\left( \sum_{j=0}^{n-1} 2^j k_j \right) \left( \sum_{l=0}^{n-1} 2^l k_l \right)} \\
+    &= e^{\sum_{j=0}^{n-1} \sum_{l=0}^{n-1} 2^{j+l} k_j k_l} \\
+    &= e^{\sum_{j=0}^{n=1} 2^{2j}k_j} e^{\sum_{j=0}^{n-1}\sum_{l=0}^{n-1}2^{j+l+1}k_j k_l}
+\end{align*}
+This can be decomposed into phase gates as follows.
+\begin{align*}
+    e^{-ik^2} &= \prod_{j=0}^{n-1} P_j(-2^{2j})\prod_{l=j+1}^{n-1}CP_{jl}(-2^{j+l+1})
+\end{align*}
+Finally deriving our quantum circuit for $f(x) = x^2$, we have
+\begin{align*}
+    e^{-if(x_k)\Delta t} &= \prod_{j=0}^{n-1} P_j(2^{j+1}d \Delta x \Delta t)P(-2^{2j}\Delta x^2 \Delta t)
+    \prod_{l=j+1}^{n-1} CP_{jl}(-2^{j+l+1}\Delta x^2 \Delta t) \\
+    &= \prod_{j=0}^{n-1} P_j(2^j \Delta x \Delta t(2d - 2^j \Delta x)) \prod_{l=j+1}^{n-1}CP_{jl}(-2^{j+l+1}\Delta x^2 \Delta t)
+\end{align*}
 \section*{Testing}
 Here I justify a test of the transport term. By our previous work,
 we know $\psi = H \varphi$, thus the initial condition $\varphi^0$ is given by 
