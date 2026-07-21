@@ -60,7 +60,7 @@ def get_sim_circuit(grid: Grid, get_one_iter: Callable[[Grid, QuantumCircuit, fl
 # because we have to normalize again before we plot anyway.
 
 def analytical_solution_free(momentum, x, t):
-    # For intial sigma = 1/np.sqrt(2)
+    # For initial sigma = 1/np.sqrt(2)
     return abs(np.sqrt(1j/(-4*t+1j))*np.exp((-1j*x**2 - momentum*x + momentum**2 * t)/(-4*t+1j)))**2
 
 

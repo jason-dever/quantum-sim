@@ -68,7 +68,7 @@ def test_all():
     grid = Grid(num_qubits = 8, d=6*np.pi)
 
     unit_test(grid, [6*t for t in range(3)], lambda x: gaussian(0, 1.2, 2, x), lambda x: gaussian(1, 0.8, -2, x), "transport")
-    unit_test(grid, [t/10 for t in range(10)], lambda x: gaussian(10, 3, 0, x), lambda x: 0*x, "transport")
+    unit_test(grid, [t/10 for t in range(10)], lambda x: gaussian(5, 3, 0, x), lambda x: 0*x, "transport")
     unit_test(grid, [t for t in range(12)], lambda x: 0*x, lambda x: gaussian(0, 1, 0, x), "transport")
     unit_test(grid, [t for t in range(10)], lambda x: gaussian(0, 1, 0, x), lambda x: gaussian(0, 1, 0, x), "transport")
 

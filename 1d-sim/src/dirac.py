@@ -77,13 +77,13 @@ def get_sim_circuit(grid: Grid, dt, final_t, m, potential=lambda grid, dt: Quant
     return qc
 
 if __name__ == "__main__":
-    grid = Grid(num_qubits=8, d=10*np.pi)
+    grid = Grid(num_qubits=7, d=4*np.pi)
 
     mu = 0
     sigma_1 = 1
     sigma_2 = 1
-    momentum_1 = 0
-    momentum_2 = 0
+    momentum_1 = 2
+    momentum_2 = 2
 
     psi_1 = np.exp(-(grid.x - mu)**2 / (2 * sigma_1**2)) * np.exp(1j * momentum_1 * grid.x)
     psi_2 = np.exp(-(grid.x - mu)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * grid.x)
@@ -93,8 +93,8 @@ if __name__ == "__main__":
 
     # max_y = max(abs(psi_1/np.linalg.norm(psi_1))**2 + abs(psi_2/np.linalg.norm(psi_2))**2)*1.05/2
     initial_statevector = Statevector(psi)
-    fig, axes = plt.subplots(1, 3, squeeze=False, figsize=(15, 4))
-    for ax, t in zip(axes.flat, [15*t for t in range(3)]):
+    fig, axes = plt.subplots(2, 3, squeeze=False, figsize=(15, 8))
+    for ax, t in zip(axes.flat, [1.5*t for t in range(6)]):
         # ax.set_ylim(top=max_y)
 
         dt = 1/8
