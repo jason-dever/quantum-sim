@@ -86,10 +86,8 @@ if __name__ == "__main__":
     momentum_2 = 0
 
     psi_1 = np.exp(-(grid.x - mu)**2 / (2 * sigma_1**2)) * np.exp(1j * momentum_1 * grid.x)
-    # psi_1 *= grid.fftshift_correction
     psi_2 = np.exp(-(grid.x - mu)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * grid.x)
     # psi_2 = 0*grid.x
-    # psi_2 *= grid.fftshift_correction
     psi = np.concatenate((psi_1, psi_2))
     psi /= np.linalg.norm(psi)
 

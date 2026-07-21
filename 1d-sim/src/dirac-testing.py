@@ -14,7 +14,7 @@ def transport_solution_2(f, g, x, t): # Second component
 # The justification for the analytical solutions and method for testing here
 # is given in dirac.tex. detailed=0 gives pass/fail + avg error, detailed=1 
 # gives individual error for each iter, detailed=2 plots probabilities against 
-# ideal on the same figure, detailed=3 gives each test its own figure
+# ideal on the same figure, detailed=3 gives each iteration its own figure
 def unit_test(grid: Grid, times, f, g, term, m=1, detailed=0, tolerance=1e-4):
     errors = []
 
