@@ -1,13 +1,9 @@
 from sim_essentials import *
 import numpy as np
 from math import floor
-from qiskit_ibm_runtime import QiskitRuntimeService
 from qiskit import QuantumCircuit
 import matplotlib.pyplot as plt
-from qiskit.transpiler import generate_preset_pass_manager
-from qiskit_ibm_runtime import SamplerV2 as Sampler
 from qiskit_ibm_runtime.fake_provider import FakeCasablancaV2
-from qiskit.quantum_info import Statevector
 from qiskit.circuit.library import QFTGate
 
 # Uncomment these two and comment the last one to run on an IBM QPU

@@ -1,6 +1,5 @@
 from sim_essentials import *
 from qiskit.circuit.library import QFTGate
-from qiskit.visualization import plot_histogram
 import matplotlib.pyplot as plt
 from math import ceil
 

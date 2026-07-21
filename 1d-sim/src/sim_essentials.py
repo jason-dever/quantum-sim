@@ -1,4 +1,3 @@
-from collections.abc import Callable
 import numpy as np
 from qiskit.quantum_info import Statevector
 from qiskit_ibm_runtime import SamplerV2 as Sampler
