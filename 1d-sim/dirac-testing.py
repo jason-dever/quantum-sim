@@ -18,7 +18,7 @@ def transport_solution_2(f, g, x, t): # Second component
 def unit_test(grid: Grid, times, f, g, term, m=1, detailed=0, tolerance=1e-4):
     errors = []
 
-    initial_psi = np.concatenate((f(grid.x)*grid.fftshift_correction, g(grid.x)*grid.fftshift_correction))
+    initial_psi = np.concatenate((f(grid.x), g(grid.x)))
     initial_psi /= np.linalg.norm(initial_psi)
     for t in times:
         # These two variables are used for graphing the ideal curve if detailed >= 2.
@@ -28,11 +28,11 @@ def unit_test(grid: Grid, times, f, g, term, m=1, detailed=0, tolerance=1e-4):
         match term:
             case "transport":
                 dynamics = dirac.transport(grid, t)
-                ideal_psi = np.concatenate((transport_solution_1(f, g, grid.x, t)*grid.fftshift_correction, 
-                                            transport_solution_2(f, g, grid.x, t)*grid.fftshift_correction))
+                ideal_psi = np.concatenate((transport_solution_1(f, g, grid.x, t), 
+                                            transport_solution_2(f, g, grid.x, t)))
                 ideal_curve = abs(transport_solution_1(f, g, x_fine, t))**2 + abs(transport_solution_2(f, g, x_fine, t))**2
             case "mass":
-                dynamics = dirac.mass(grid, m, t)
+                dynamics = dirac.mass(grid, t, m)
                 ideal_psi = np.concatenate((np.exp(-1j*m*t)*initial_psi[:grid.N], np.exp(1j*m*t)*initial_psi[grid.N:]))
                 ideal_curve = abs(f(x_fine))**2 + abs(g(x_fine))**2 # Phase accumulated is not relevant to measurement probabilities
 
@@ -68,14 +68,14 @@ def test_all():
     grid = Grid(num_qubits = 8, d=6*np.pi)
 
     unit_test(grid, [6*t for t in range(3)], lambda x: gaussian(0, 1.2, 2, x), lambda x: gaussian(1, 0.8, -2, x), "transport")
-    unit_test(grid, [t/10 for t in range(10)], lambda x: gaussian(10, 3, 0, x), lambda x: 0, "transport")
-    unit_test(grid, [t for t in range(12)], lambda x: 0, lambda x: gaussian(0, 1, 0, x), "transport")
+    unit_test(grid, [t/10 for t in range(10)], lambda x: gaussian(10, 3, 0, x), lambda x: 0*x, "transport")
+    unit_test(grid, [t for t in range(12)], lambda x: 0*x, lambda x: gaussian(0, 1, 0, x), "transport")
     unit_test(grid, [t for t in range(10)], lambda x: gaussian(0, 1, 0, x), lambda x: gaussian(0, 1, 0, x), "transport")
 
     unit_test(grid, [4*t for t in range(4)], lambda x: gaussian(-5, 1/np.sqrt(2), 1, x), lambda x: gaussian(5, 1, -2, x), "mass", m=2)
-    unit_test(grid, [t/10 for t in range(10)], lambda x: gaussian(10, 3, 0, x), lambda x: 0, "mass")
-    unit_test(grid, [t for t in range(12)], lambda x: 0, lambda x: gaussian(0, 1, 0, x), "mass", m=0)
-    unit_test(grid, [t for t in range(12)], lambda x: 0, lambda x: gaussian(0, 1, 0, x), "mass")
+    unit_test(grid, [t/10 for t in range(10)], lambda x: gaussian(10, 3, 0, x), lambda x: 0*x, "mass")
+    unit_test(grid, [t for t in range(12)], lambda x: 0*x, lambda x: gaussian(0, 1, 0, x), "mass", m=0)
+    unit_test(grid, [t for t in range(12)], lambda x: 0*x, lambda x: gaussian(0, 1, 0, x), "mass")
     unit_test(grid, [t for t in range(10)], lambda x: gaussian(0, 1, 0, x), lambda x: gaussian(0, 1, 0, x), "mass", m=-2)
 
 test_all()
