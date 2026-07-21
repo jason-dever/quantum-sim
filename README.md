@@ -62,17 +62,22 @@ free particle given by the initial state $\psi_1 = \psi_2 \propto e^{-x^2/2}$, $
 An important distinction between the free Dirac and free Schrödinger equations is that a "nice"
 initial state (a Gaussian wavepacket) does not behave in a "nice" manner: the plot is highly non-uniform in
 its shape. In contrast, a Gaussian wavepacket governed by Schrödinger disperses symmetrically and remains
-Gaussian for all time.
+Gaussian for all time. The asymmetry in the dispersion is influenced by a phenomenon discovered by Schrödinger
+in 1930, dubbed Zitterbewegung (quivering motion), referring to a rapid oscillation of the expected position of 
+particles governed by the Dirac equation.
 
-Now we modify the initial state slightly, letting $\psi_1 = \psi_2 \propto e^{-x^2/2 + 2ix}$, giving
-the particle a small positive momentum.
+![zitterbewegung](1d-sim/plots/zitterbewegung.png)
+
+This is a very interesting behaviour in part because it contradicts Newton's first law; a free particle
+is moving at a velocity that is not constant.  That being said, the Zitterbewegung is interpreted as an artifact 
+of the equation, rather than a physically present quality. Now we modify the initial state slightly, letting 
+$\psi_1 = \psi_2 \propto e^{-x^2/2 + 2ix}$, giving the particle a small positive momentum.
 
 ![free-dirac-p=2](1d-sim/plots/free-dirac-p=2.png)
 
 See that the wavepacket splits into two peaks: a right moving component and a much smaller, left moving
 negative energy component. One could play with the spinor and potential forever and get all kinds of crazy 
-behaviours, but this to me is the most interesting. That being said, perhaps an interesting analysis I haven't
-done would be to plot the (what should be present) Zitterbewegung in the zero momentum case.
+behaviours, but this to me is the most interesting. 
 ## Usage
 After installing the required packages, this should work out of the box. One can plug and play values
 for momentum, expected value, uncertainty, mass (in Dirac) and which potential to be simulated. Plots of the same form
