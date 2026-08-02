@@ -85,7 +85,7 @@ def transport(grid: Grid, dim: Dimension, dt) -> QuantumCircuit:
 
     return qc
 
-def mass(grid: Grid, dt) -> QuantumCircuit:
+def mass(grid: Grid, m, dt) -> QuantumCircuit:
     qc = get_empty_qc(grid, measuring=[])
     s_1 = qc.num_qubits-1
 
