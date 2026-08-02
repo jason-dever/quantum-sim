@@ -85,6 +85,13 @@ def transport(grid: Grid, dim: Dimension, dt) -> QuantumCircuit:
 
     return qc
 
+def mass(grid: Grid, dt) -> QuantumCircuit:
+    qc = get_empty_qc(grid, measuring=[])
+    s_1 = qc.num_qubits-1
+
+    qc.rz(2*m*dt, s_1)
+    return qc
+
 grid = Grid((3, 3, 5), (np.pi, np.pi, 1.5*np.pi))
 gaussian = lambda x, y, z: np.exp(-(x**2+y**2+z**2)/2)
 
