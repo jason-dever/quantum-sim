@@ -1,9 +1,12 @@
+from math import ceil
 from dataclasses import dataclass
 from enum import IntEnum
 import numpy as np
 from qiskit import ClassicalRegister, QuantumRegister, QuantumCircuit
 from qiskit.circuit.library import QFTGate, PauliGate
 from qiskit.quantum_info import Pauli, Statevector
+from qiskit_ibm_runtime import QiskitRuntimeService
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from matplotlib import pyplot as plt
 
 class Dimension(IntEnum):
@@ -92,36 +95,93 @@ def mass(grid: Grid, m, dt) -> QuantumCircuit:
     qc.rz(2*m*dt, s_1)
     return qc
 
-grid = Grid((3, 3, 5), (np.pi, np.pi, 1.5*np.pi))
-gaussian = lambda x, y, z: np.exp(-(x**2+y**2+z**2)/2)
+def complete_transport(grid: Grid, dt) -> QuantumCircuit:
+    qc = get_empty_qc(grid, measuring=[])
+    for dim in Dimension:
+        qc.compose(transport(grid, dim, dt), inplace=True)
+    return qc
 
-psi_component = np.ndarray((grid.num_grid_positions,), dtype=complex)
-for l in range(grid.N[Dimension.Z]):
-    for k in range(grid.N[Dimension.Y]):
-        for j in range(grid.N[Dimension.X]):
-            x = -grid.axis_maxes[Dimension.X]+j*grid.dspace[Dimension.X]
-            y = -grid.axis_maxes[Dimension.Y]+k*grid.dspace[Dimension.Y]
-            z = -grid.axis_maxes[Dimension.Z]+l*grid.dspace[Dimension.Z]
+def get_sim_dynamics(grid: Grid, dt, final_t, m) -> QuantumCircuit:
+    qc = get_empty_qc(grid, measuring=[])
+    if final_t == 0:
+        return qc
 
-            # print(j, k, l)
-            psi_component[j + 2**(grid.num_qubits[Dimension.X])*k + 
-                          2**(grid.num_qubits[Dimension.X]+grid.num_qubits[Dimension.Y])*l] = gaussian(x, y, z)
-psi = np.concatenate((psi_component, psi_component, psi_component, psi_component))
-psi /= np.linalg.norm(psi)
-# print(len(psi))
+    num_iter = ceil(final_t/dt)
+    dt = final_t/num_iter
 
-qc = get_empty_qc(grid, measuring=[])
-qc.initialize(psi)
-# qc.compose(transport(grid, Dimension.X, 0.5), inplace=True)
-# qc.compose(transport(grid, Dimension.Y, 1), inplace=True)
-qc.compose(transport(grid, Dimension.Z, 2), inplace=True)
-vec = Statevector.from_circuit(qc)
-# qc_decomposed = qc.decompose()
-# print(qc.depth())
-# print(qc_decomposed.depth())
-# qc.decompose().draw(output="mpl", filename="decomposed-transport.png")
-# qc.draw(output="mpl", filename="transport.png")
-# # for qubit in qc.qubits:
-# #     print(qubit)
-plt.bar(np.arange(32), vec.probabilities(qargs=list(range(6, 11))))
-plt.show()
+    qc.compose(mass(grid, m, dt/2), inplace=True)
+    # qc.compose(potential(grid, dt/2), inplace=True)
+    for _ in range(num_iter-1):
+        qc.compose(complete_transport(grid, dt), inplace=True)
+        qc.compose(mass(grid, m, dt), inplace=True)
+        # qc.compose(potential(grid, dt), inplace=True)
+
+    qc.compose(complete_transport(grid, dt), inplace=True)
+    qc.compose(mass(grid, m, dt/2), inplace=True)
+    # qc.compose(potential(grid, dt/2), inplace=True)
+
+    return qc
+
+def estimate_analytics(grid: Grid, num_steps, initialize=False):
+    qc = get_empty_qc(grid, measuring=[])
+    if initialize:
+        psi_1 = get_gaussian_component(grid)
+        zero = np.zeros((grid.num_grid_positions,), dtype=complex)
+        psi = np.concatenate((psi_1, zero, zero, zero))
+        psi /= np.linalg.norm(psi)
+        qc.initialize(psi)
+
+    qc.compose(get_sim_dynamics(grid, dt=1, final_t=num_steps, m=1).decompose(), inplace=True)
+
+    service = QiskitRuntimeService()
+    backend = service.least_busy(operational=True, simulator=False)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=3)
+
+    isa_circuit = pm.run(qc)
+
+    fidelity = isa_circuit.estimate_fidelity(target=backend.target)
+    print(isa_circuit.count_ops())
+    print(f'''backend: {backend.name}
+num steps: {num_steps}
+estimated fidelity: {fidelity}''')
+
+def get_gaussian_component(grid: Grid):
+    gaussian = lambda x, y, z: np.exp(-(x**2+y**2+z**2)/2)
+
+    psi = np.empty((grid.num_grid_positions,), dtype=complex)
+    for l in range(grid.N[Dimension.Z]):
+        for k in range(grid.N[Dimension.Y]):
+            for j in range(grid.N[Dimension.X]):
+                x = -grid.axis_maxes[Dimension.X]+j*grid.dspace[Dimension.X]
+                y = -grid.axis_maxes[Dimension.Y]+k*grid.dspace[Dimension.Y]
+                z = -grid.axis_maxes[Dimension.Z]+l*grid.dspace[Dimension.Z]
+
+                psi[j + 2**(grid.num_qubits[Dimension.X])*k +
+                              2**(grid.num_qubits[Dimension.X]+grid.num_qubits[Dimension.Y])*l] = gaussian(x, y, z)
+    return psi
+
+
+grid = Grid((3, 3, 3), (2*np.pi, 2*np.pi, 2*np.pi))
+for num_steps in range(12):
+    estimate_analytics(grid, num_steps, initialize=True)
+    print("")
+
+# psi = np.concatenate((psi_component, psi_component, psi_component, psi_component))
+# psi /= np.linalg.norm(psi)
+# # print(len(psi))
+
+# qc = get_empty_qc(grid, measuring=[])
+# qc.initialize(psi)
+# # qc.compose(transport(grid, Dimension.X, 0.5), inplace=True)
+# # qc.compose(transport(grid, Dimension.Y, 1), inplace=True)
+# qc.compose(transport(grid, Dimension.Z, 2), inplace=True)
+# vec = Statevector.from_circuit(qc)
+# # qc_decomposed = qc.decompose()
+# # print(qc.depth())
+# # print(qc_decomposed.depth())
+# # qc.decompose().draw(output="mpl", filename="decomposed-transport.png")
+# # qc.draw(output="mpl", filename="transport.png")
+# # # for qubit in qc.qubits:
+# # #     print(qubit)
+# plt.bar(np.arange(32), vec.probabilities(qargs=list(range(6, 11))))
+# plt.show()

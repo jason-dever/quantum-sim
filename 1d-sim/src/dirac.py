@@ -5,6 +5,8 @@ from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFTGate
 from qiskit.quantum_info import Statevector
 from sim_essentials import Grid, get_empty_sim, exact_sim, approx_sim
+from qiskit_ibm_runtime import QiskitRuntimeService
+from qiskit_ibm_runtime.fake_provider import FakeCasablancaV2
 
 def transport(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
     qc = get_empty_sim(grid, num_spinor)
@@ -105,7 +107,7 @@ def plot_zitterbewegung():
             x = -grid.d + k*grid.dx
             expected_x += x*prob
 
-        # print(expected_x, t)
+        print(expected_x, t)
         expected_positions.append(expected_x)
 
     plt.xlabel("time")
@@ -114,32 +116,38 @@ def plot_zitterbewegung():
     plt.plot(times, expected_positions)
 
 def plot_snapshots():
-    grid = Grid(num_qubits=7, d=4*np.pi)
+    grid = Grid(num_qubits=6, d=2.5*np.pi)
 
     mu = 0
     sigma_1 = 1
     sigma_2 = 1
-    momentum_1 = 2
-    momentum_2 = 2
+    momentum_1 = 5
+    momentum_2 = 0
 
     psi_1 = np.exp(-(grid.x - mu)**2 / (2 * sigma_1**2)) * np.exp(1j * momentum_1 * grid.x)
-    psi_2 = np.exp(-(grid.x - mu)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * grid.x)
-    # psi_2 = 0*grid.x
+    # psi_2 = np.exp(-(grid.x - mu)**2 / (2 * sigma_2**2)) * np.exp(1j * momentum_2 * grid.x)
+    psi_2 = 0*grid.x
     psi = np.concatenate((psi_1, psi_2))
     psi /= np.linalg.norm(psi)
 
     # max_y = max(abs(psi_1/np.linalg.norm(psi_1))**2 + abs(psi_2/np.linalg.norm(psi_2))**2)*1.05/2
-    fig, axes = plt.subplots(2, 3, squeeze=False, figsize=(15, 8))
+    fig, axes = plt.subplots(3, 2, squeeze=False, figsize=(15, 8))
     for ax, t in zip(axes.flat, [t for t in range(9)]):
         # ax.set_ylim(top=max_y)
 
-        dt = 1/8
-        m=1
+        dt = 1
+        m=0
+        print(f"num_steps: {ceil(t/dt)}")
 
         dynamics = get_empty_sim(grid, num_spinor=1)
         dynamics.compose(get_sim_circuit(grid, dt, t, m), inplace=True)
 
-        probs = exact_sim(grid, psi, dynamics, num_spinor=1)
+        service = QiskitRuntimeService()
+        backend = service.least_busy(simulator=False, operational=True)
+        # backend = FakeCasablancaV2()
+
+        probs = approx_sim(grid, psi, dynamics, num_spinor=1, backend=backend, num_shots=2048)
+        # probs = exact_sim(grid, psi, dynamics, num_spinor=1)
 
         ax.bar(grid.x, probs, width=0.7*grid.dx)
         ax.set_xlabel("position")
