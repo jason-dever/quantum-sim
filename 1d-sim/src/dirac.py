@@ -8,8 +8,8 @@ from sim_essentials import Grid, get_empty_sim, exact_sim, approx_sim
 from qiskit_ibm_runtime import QiskitRuntimeService
 from qiskit_ibm_runtime.fake_provider import FakeCasablancaV2
 
-def transport(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
-    qc = get_empty_sim(grid, num_spinor)
+def transport(grid: Grid, dt) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor=1)
     indicator_idx = qc.num_qubits-1 # Spinor indicator is most significant qubit
 
     qc.h(indicator_idx)
@@ -32,23 +32,23 @@ def transport(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
 
     return qc
 
-def mass(grid: Grid, dt, m, num_spinor=1) -> QuantumCircuit:
-    qc = get_empty_sim(grid, num_spinor)
+def mass(grid: Grid, dt, m) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor=1)
     indicator_idx = qc.num_qubits-1
 
     qc.rz(2*m*dt, indicator_idx)
     return qc
 
-def linear_potential(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
-    qc = get_empty_sim(grid, num_spinor)
+def linear_potential(grid: Grid, dt) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor=1)
 
     for j in range(grid.num_qubits):
         qc.p(-2**j * grid.dx * dt, j)
 
     return qc
 
-def qho_potential(grid: Grid, dt, num_spinor=1) -> QuantumCircuit:
-    qc = get_empty_sim(grid, num_spinor)
+def qho_potential(grid: Grid, dt) -> QuantumCircuit:
+    qc = get_empty_sim(grid, num_spinor=1)
 
     for j in range(grid.num_qubits):
         qc.p(2**j * grid.dx * dt * (2*grid.d - 2**j * grid.dx), j)

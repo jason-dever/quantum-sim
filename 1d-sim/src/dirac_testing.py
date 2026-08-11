@@ -1,6 +1,8 @@
-from sim_essentials import *
+import numpy as np
+from sim_essentials import Grid, get_empty_sim
 import dirac
 import matplotlib.pyplot as plt
+from qiskit.quantum_info import Statevector
 
 def gaussian(mu, sigma, momentum, x):
     return np.exp(-(x-mu)**2/(2*sigma**2)) * np.exp(1j*momentum*x)
@@ -12,8 +14,8 @@ def transport_solution_2(f, g, x, t): # Second component
     return 1/2*(f(x-t) + g(x-t) - f(x+t) + g(x+t))
 
 # The justification for the analytical solutions and method for testing here
-# is given in dirac.tex. detailed=0 gives pass/fail + avg error, detailed=1 
-# gives individual error for each iter, detailed=2 plots probabilities against 
+# is given in dirac.tex. detailed=0 gives pass/fail + avg error, detailed=1
+# gives individual error for each iter, detailed=2 plots probabilities against
 # ideal on the same figure, detailed=3 gives each iteration its own figure
 def unit_test(grid: Grid, times, f, g, term, m=1, detailed=0, tolerance=1e-4):
     errors = []
@@ -23,7 +25,7 @@ def unit_test(grid: Grid, times, f, g, term, m=1, detailed=0, tolerance=1e-4):
     for t in times:
         # These two variables are used for graphing the ideal curve if detailed >= 2.
         num_pts = 1024
-        x_fine = np.linspace(-grid.d, grid.d, num_pts, endpoint=False)    
+        x_fine = np.linspace(-grid.d, grid.d, num_pts, endpoint=False)
 
         match term:
             case "transport":
