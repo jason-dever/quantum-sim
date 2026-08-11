@@ -66,8 +66,8 @@ def transport(grid: Grid, dim: Dimension, dt) -> QuantumCircuit:
 
     csigma = PauliGate(dim.name).control()
 
-    qc.h(s_1)
     qc.append(csigma, [s_1, s_0])
+    qc.h(s_1)
 
     qc.compose(QFTGate(grid.num_qubits[dim]).inverse(), pos_reg, inplace=True)
 
