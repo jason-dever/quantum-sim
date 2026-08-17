@@ -1,11 +1,13 @@
 from math import ceil
+from datetime import timedelta
 import numpy as np
 import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFTGate
 from qiskit.quantum_info import Statevector
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from sim_essentials import Grid, get_empty_sim, exact_sim, approx_sim
-from qiskit_ibm_runtime import QiskitRuntimeService
+from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
 from qiskit_ibm_runtime.fake_provider import FakeCasablancaV2
 
 def transport(grid: Grid, dt) -> QuantumCircuit:
@@ -79,6 +81,32 @@ def get_sim_circuit(grid: Grid, dt, final_t, m, potential=lambda grid, dt: Quant
     qc.compose(transport(grid, dt/2), inplace=True)
 
     return qc
+
+def one_step_runtime(num_grid_qubits, potential = lambda grid, dt: QuantumCircuit(grid.num_qubits)):
+    grid = Grid(num_grid_qubits, 2*np.pi)
+    qc = get_empty_sim(grid, num_spinor=1, measuring=True)
+    qc.compose(get_sim_circuit(grid, 1, 1, 1, potential), inplace=True)
+
+    pos_reg = next(r for r in qc.qregs if r.name == "pos")
+    measurement_reg = next(r for r in qc.cregs if r.name == "meas")
+    qc.measure(pos_reg, measurement_reg)
+
+    service = QiskitRuntimeService()
+    backend = service.least_busy(operational=True, simulator=False)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=0)
+
+    nshots = 4096
+    sampler = SamplerV2(mode=backend)
+    sampler.options.default_shots = nshots
+
+    isa_circuit = pm.run(qc)
+    job = sampler.run([isa_circuit])
+    span = job.result().metadata["execution"]["execution_spans"]
+
+    runtime = span.stop-span.start
+    print(f"{num_grid_qubits} grid qubits, runtime {runtime/timedelta(microseconds=1)}us")
+    return runtime/timedelta(microseconds=1)
+
 
 def plot_zitterbewegung():
     grid = Grid(num_qubits=8, d=10*np.pi)
@@ -156,7 +184,19 @@ def plot_snapshots():
 
 
 if __name__ == "__main__":
-    plot_snapshots()
+    # times = []
+    # ngrid_positions = []
+    # for nqubits in range(1, 24):
+    #     times.append(one_step_runtime(nqubits, qho_potential))
+    #     ngrid_positions.append(2**nqubits)
+
+    # plt.plot(ngrid_positions, times)
+
+    grid = Grid(num_qubits=6, d=2*np.pi)
+    one_step_circuit = get_sim_circuit(grid, 1, 1, 1, qho_potential)
+    one_step_circuit.draw(output="mpl", filename="one_step_circuit_1d.png")
+
+    # plot_snapshots()
     # plot_zitterbewegung()
     plt.tight_layout()
     plt.show()
