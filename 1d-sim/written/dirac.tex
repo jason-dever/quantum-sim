@@ -238,5 +238,21 @@ since the system is already uncoupled, we can solve
     \end{pmatrix}
 \end{align*}
 and test by the same procedure.
+\section*{Position Operator}
+We want to define $\hat{x}$ by 
+\begin{align*}
+    \hat{x}\ket{s}\ket{k} &= x_k \ket{s} \ket{k} \\
+                          &= \ket{s}\left( -d + k \Delta x \ket{k} \right) \\
+                          &= I \otimes A \text{\quad where $A$ maps $\ket{k}$ to $x_k \ket{k}$}
+\end{align*}
+The part that takes work we already have an answer for: the operator $\ket{k} \mapsto k \ket{k}$
+is the sum $\sum_{j=0}^{n-1} \frac{I-Z_j}{2}2^j$, given by the binary expansion of $k = \sum 2^j k_j$.
+Deriving now $\hat{x}$,
+\begin{align*}
+    \hat{x} &= -dI + \Delta x \sum_{j=0}^{n-1} \frac{I-Z_j}{2}2^j \\
+            &= -dI + \frac{\Delta x}{2} \sum_{j=0}^{n-1}2^j I - \frac{\Delta x}{2} \sum_{j=0}^{n-1}2^j Z_j \\
+            &= \left( \frac{\Delta x}{2} \left( N - 1 \right) - d \right)I - \sum_{j=0}^{n-1} \Delta x 2^{j-1} Z_j
+\end{align*}
+Where $Z_j$ is $\sigma_z$ on the $j$th grid qubit.
 
 \end{document}
