@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFTGate
-from qiskit.quantum_info import Statevector
+from qiskit.quantum_info import Statevector, SparsePauliOp
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
-from sim_essentials import Grid, get_empty_sim, exact_sim, approx_sim
+from sim_essentials import Grid, get_empty_sim, exact_sim, approx_sim, gaussian
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
 from qiskit_ibm_runtime.fake_provider import FakeCasablancaV2
 
@@ -123,25 +123,30 @@ def plot_zitterbewegung():
     time_resolution = 1/8
     final_t = 30
     times = [t*time_resolution for t in range(ceil(final_t/time_resolution)+1)]
+    x_hat = position_operator(grid)
     for t in times:
         dynamics = get_empty_sim(grid, num_spinor=1)
         dynamics.initialize(psi)
         dynamics.compose(get_sim_circuit(grid, dt, time_resolution, m), inplace=True)
+
         psi = Statevector.from_circuit(dynamics)
-        probs = psi.probabilities(qargs=list(range(grid.num_qubits)))
-
-        expected_x = 0
-        for k, prob in enumerate(probs):
-            x = -grid.d + k*grid.dx
-            expected_x += x*prob
-
-        print(expected_x, t)
-        expected_positions.append(expected_x)
+        print(psi.expectation_value(x_hat))
+        expected_positions.append(psi.expectation_value(x_hat))
 
     plt.xlabel("time")
     plt.ylabel("expected position")
     plt.title("initial psi_1 = psi_2 = exp(-x^2/2), expected position over time")
     plt.plot(times, expected_positions)
+
+def position_operator(grid: Grid):
+    terms = []
+    terms.append(("I"*(grid.num_qubits+1), grid.dx*(grid.N-1)/2 - grid.d))
+
+    for k in range(grid.num_qubits):
+        z_k = "I"*(grid.num_qubits-k) + "Z" + "I"*k
+        terms.append((z_k, -grid.dx * 2**(k-1)))
+
+    return SparsePauliOp.from_list(terms)
 
 def plot_snapshots():
     grid = Grid(num_qubits=6, d=2.5*np.pi)
@@ -192,11 +197,11 @@ if __name__ == "__main__":
 
     # plt.plot(ngrid_positions, times)
 
-    grid = Grid(num_qubits=6, d=2*np.pi)
-    one_step_circuit = get_sim_circuit(grid, 1, 1, 1, qho_potential)
-    one_step_circuit.draw(output="mpl", filename="one_step_circuit_1d.png")
+    # grid = Grid(num_qubits=6, d=2*np.pi)
+    # one_step_circuit = get_sim_circuit(grid, 1, 1, 1, qho_potential)
+    # one_step_circuit.draw(output="mpl", filename="one_step_circuit_1d.png")
 
     # plot_snapshots()
-    # plot_zitterbewegung()
+    plot_zitterbewegung()
     plt.tight_layout()
     plt.show()
