@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.transpiler import generate_preset_pass_manager
 
+def gaussian(mu, sigma, momentum, x):
+    return np.exp(-(x-mu)**2/(2*sigma**2)) * np.exp(1j*momentum*x)
+
 @dataclass(frozen=True)
 class Grid: # This is a centralized config object for discretizing a 1D grid.
     num_qubits: int

@@ -1,11 +1,8 @@
 import numpy as np
-from sim_essentials import Grid, get_empty_sim
+from sim_essentials import Grid, get_empty_sim, gaussian
 import dirac
 import matplotlib.pyplot as plt
 from qiskit.quantum_info import Statevector
-
-def gaussian(mu, sigma, momentum, x):
-    return np.exp(-(x-mu)**2/(2*sigma**2)) * np.exp(1j*momentum*x)
 
 def transport_solution_1(f, g, x, t): # First spinor component
     return 1/2*(f(x-t) + g(x-t) + f(x+t) - g(x+t))
